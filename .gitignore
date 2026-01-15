@@ -1,11 +1,10 @@
 .DS_Store
 .build
-.swiftpm
-.vscode
 Packages
 *.xcodeproj
-xcuserdata/
-Package.resolved
-db.sqlite
-migration-entries.json
-openapi.yaml
+xcuserdata
+DerivedData
+.swiftpm
+*.xctestplan
+docker/postgres/certificates
+docker/mariadb/certificates

@@ -1,0 +1,2 @@
+Package.swift
+Sources/FeatherSQLiteDatabase/SQLiteDatabaseClient.swift
