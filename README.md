@@ -36,7 +36,7 @@ Add the dependency to your `Package.swift`:
 .package(url: "https://github.com/feather-framework/feather-sqlite-database", exact: "1.0.0-beta.1"),
 ```
 
-Then add `FeatherDatabase` to your target dependencies:
+Then add `FeatherSQLiteDatabase` to your target dependencies:
 
 ```swift
 .product(name: "FeatherSQLiteDatabase", package: "feather-sqlite-database"),
