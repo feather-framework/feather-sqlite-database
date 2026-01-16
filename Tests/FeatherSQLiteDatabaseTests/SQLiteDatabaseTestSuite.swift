@@ -752,6 +752,11 @@ struct SQLiteDatabaseTestSuite {
                         1=\#(1);
                     """#
             )
+            
+            for try await item in result {
+                let version = try item.decode(column: "version", as: String.self)
+                print(version)
+            }
 
             let resultArray = try await result.collect()
             #expect(resultArray.count == 1)
