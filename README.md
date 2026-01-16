@@ -62,7 +62,7 @@ var logger = Logger(label: "example")
 logger.logLevel = .info
 
 let connection = try await SQLiteConnection.open(
-    storage: .memory,
+    storage: .file(path: "/Users/me/db.sqlite"),
     logger: logger
 )
 
