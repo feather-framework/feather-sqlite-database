@@ -33,7 +33,7 @@ SQLite driver implementation for the abstract [Feather Database]() Swift API pac
 Add the dependency to your `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/feather-framework/feather-sqlite-database", from: "1.0.0-beta.1"),
+.package(url: "https://github.com/feather-framework/feather-sqlite-database", exact: "1.0.0-beta.1"),
 ```
 
 Then add `FeatherDatabase` to your target dependencies:
