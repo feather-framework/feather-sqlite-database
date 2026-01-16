@@ -1,5 +1,5 @@
 {
-  "originHash" : "76e4dbca2695161c3b8c9132860b53dba978034ff45359b1a2959c347706f62f",
+  "originHash" : "dbb760472398be44f19d7d470a8f7cb85c5cc603cd6b42ec774e30cecd46a146",
   "pins" : [
     {
       "identity" : "feather-database",
@@ -7,7 +7,7 @@
       "location" : "https://github.com/feather-framework/feather-database",
       "state" : {
         "branch" : "feature/swift-6",
-        "revision" : "4b79c46d427e400ef2c6fa959db77890e2847cc3"
+        "revision" : "9e299d72490e7a135b6b00557e5bc60285eb531c"
       }
     },
     {

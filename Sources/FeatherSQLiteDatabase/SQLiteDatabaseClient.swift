@@ -32,18 +32,19 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     }
 
     // MARK: - database api
-    #if compiler(>=6.2)
+
     /// Execute work using the stored connection.
     ///
     /// The closure is executed with the current connection.
-    /// - Parameter closure: A closure that receives the SQLite connection.
+    /// - Parameters:
+    ///   - isolation: The actor isolation to use for the closure.
+    ///   - closure: A closure that receives the SQLite connection.
     /// - Throws: A `DatabaseError` if the connection fails.
     /// - Returns: The query result produced by the closure.
     @discardableResult
     public func connection(
-        _ closure:
-            nonisolated(nonsending)(SQLiteConnection) async throws
-            -> sending SQLiteQueryResult
+        isolation: isolated (any Actor)? = #isolation,
+        _ closure: (SQLiteConnection) async throws -> sending SQLiteQueryResult
     ) async throws(DatabaseError) -> sending SQLiteQueryResult {
         do {
             return try await closure(connection)
@@ -59,14 +60,15 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     /// Execute work inside a SQLite transaction.
     ///
     /// The closure runs between `BEGIN` and `COMMIT` with rollback on failure.
-    /// - Parameter closure: A closure that receives the SQLite connection.
+    /// - Parameters:
+    ///   - isolation: The actor isolation to use for the closure.
+    ///   - closure: A closure that receives the SQLite connection.
     /// - Throws: A `DatabaseError` if transaction handling fails.
     /// - Returns: The query result produced by the closure.
     @discardableResult
     public func transaction(
-        _ closure:
-            nonisolated(nonsending)(SQLiteConnection) async throws
-            -> sending SQLiteQueryResult
+        isolation: isolated (any Actor)? = #isolation,
+        _ closure: (SQLiteConnection) async throws -> sending SQLiteQueryResult
     ) async throws(DatabaseError) -> sending SQLiteQueryResult {
 
         do {
@@ -115,84 +117,5 @@ public struct SQLiteDatabaseClient: DatabaseClient {
             throw DatabaseError.transaction(txError)
         }
     }
-    #else
-    /// Execute work using the stored connection.
-    ///
-    /// The closure is executed with the current connection.
-    /// - Parameter closure: A closure that receives the SQLite connection.
-    /// - Throws: A `DatabaseError` if the connection fails.
-    /// - Returns: The query result produced by the closure.
-    @discardableResult
-    public func connection(
-        _ closure: (SQLiteConnection) async throws -> SQLiteQueryResult
-    ) async throws(DatabaseError) -> SQLiteQueryResult {
-        do {
-            return try await closure(connection)
-        }
-        catch let error as DatabaseError {
-            throw error
-        }
-        catch {
-            throw .connection(error)
-        }
-    }
 
-    /// Execute work inside a SQLite transaction.
-    ///
-    /// The closure runs between `BEGIN` and `COMMIT` with rollback on failure.
-    /// - Parameter closure: A closure that receives the SQLite connection.
-    /// - Throws: A `DatabaseError` if transaction handling fails.
-    /// - Returns: The query result produced by the closure.
-    @discardableResult
-    public func transaction(
-        _ closure: (SQLiteConnection) async throws -> SQLiteQueryResult
-    ) async throws(DatabaseError) -> SQLiteQueryResult {
-
-        do {
-            try await connection.execute(query: "BEGIN;")
-        }
-        catch {
-            throw DatabaseError.transaction(
-                SQLiteTransactionError(beginError: error)
-            )
-        }
-
-        var closureHasFinished = false
-
-        do {
-            let result = try await closure(connection)
-            closureHasFinished = true
-
-            do {
-                try await connection.execute(query: "COMMIT;")
-            }
-            catch {
-                throw DatabaseError.transaction(
-                    SQLiteTransactionError(commitError: error)
-                )
-            }
-
-            return result
-        }
-        catch {
-            var txError = SQLiteTransactionError()
-
-            if !closureHasFinished {
-                txError.closureError = error
-
-                do {
-                    try await connection.execute(query: "ROLLBACK;")
-                }
-                catch {
-                    txError.rollbackError = error
-                }
-            }
-            else {
-                txError.commitError = error
-            }
-
-            throw DatabaseError.transaction(txError)
-        }
-    }
-    #endif
 }
