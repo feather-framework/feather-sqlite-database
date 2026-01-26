@@ -42,10 +42,10 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     /// - Throws: A `DatabaseError` if the connection fails.
     /// - Returns: The query result produced by the closure.
     @discardableResult
-    public func connection(
+    public func connection<T>(
         isolation: isolated (any Actor)? = #isolation,
-        _ closure: (SQLiteConnection) async throws -> sending SQLiteQueryResult
-    ) async throws(DatabaseError) -> sending SQLiteQueryResult {
+        _ closure: (SQLiteConnection) async throws -> sending T
+    ) async throws(DatabaseError) -> sending T {
         do {
             return try await closure(connection)
         }
@@ -66,10 +66,10 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     /// - Throws: A `DatabaseError` if transaction handling fails.
     /// - Returns: The query result produced by the closure.
     @discardableResult
-    public func transaction(
+    public func transaction<T>(
         isolation: isolated (any Actor)? = #isolation,
-        _ closure: (SQLiteConnection) async throws -> sending SQLiteQueryResult
-    ) async throws(DatabaseError) -> sending SQLiteQueryResult {
+        _ closure: (SQLiteConnection) async throws -> sending T
+    ) async throws(DatabaseError) -> sending T {
 
         do {
             try await connection.execute(query: "BEGIN;")

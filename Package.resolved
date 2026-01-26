@@ -1,13 +1,13 @@
 {
-  "originHash" : "3f3c993362a6be1c507fa40f0e4113550a3f2c599ccc4396da554f3df56b6b51",
+  "originHash" : "816ee700ae5206734d35d787d67b0af726ff97f74c5e84dec48c842bb3679698",
   "pins" : [
     {
       "identity" : "feather-database",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/feather-framework/feather-database",
       "state" : {
-        "revision" : "34b05e9ca725bf857c9bc6e29603a4e457f9969a",
-        "version" : "1.0.0-beta.1"
+        "revision" : "147c96803f398c50f5717ce08ebd78a9e3ab7ca7",
+        "version" : "1.0.0-beta.2"
       }
     },
     {
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
       "state" : {
-        "revision" : "4a9a97111099376854a7f8f0f9f88b9d61f52eff",
-        "version" : "2.92.2"
+        "revision" : "233f61bc2cfbb22d0edeb2594da27a20d2ce514e",
+        "version" : "2.93.0"
       }
     },
     {
