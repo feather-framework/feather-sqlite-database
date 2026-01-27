@@ -71,12 +71,14 @@ logger.logLevel = .info
 
 let configuration = SQLiteClient.Configuration(
     storage: .file(path: "/Users/me/db.sqlite"),
-    pool: .init(minimumConnections: 1, maximumConnections: 4),
+    pool: .init(minimumConnections: 1, maximumConnections: 1),
     logger: logger
 )
 
-let database = SQLiteDatabaseClient(configuration: configuration)
-try await database.run()
+let client = SQLiteClient(configuration: configuration)
+try await client.run()
+
+let database = SQLiteDatabaseClient(client: client)
 
 let result = try await database.execute(
     query: #"""
@@ -92,7 +94,7 @@ for try await item in result {
     print(version)
 }
 
-await database.shutdown()
+await client.shutdown()
 ```
 
 > [!WARNING]  
