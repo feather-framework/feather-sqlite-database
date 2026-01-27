@@ -71,7 +71,6 @@ logger.logLevel = .info
 
 let configuration = SQLiteClient.Configuration(
     storage: .file(path: "/Users/me/db.sqlite"),
-    pool: .init(minimumConnections: 1, maximumConnections: 1),
     logger: logger
 )
 

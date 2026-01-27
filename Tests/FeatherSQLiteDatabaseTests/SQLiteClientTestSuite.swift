@@ -32,8 +32,7 @@ struct SQLiteClientTestSuite {
 
         let configuration = SQLiteClient.Configuration(
             storage: .file(path: makeTemporaryDatabasePath()),
-            pool: .init(minimumConnections: 0, maximumConnections: 8),
-            logger: logger
+            logger: logger,
         )
         let client = SQLiteClient(configuration: configuration)
 
@@ -50,7 +49,6 @@ struct SQLiteClientTestSuite {
 
         let configuration = SQLiteClient.Configuration(
             storage: .file(path: makeTemporaryDatabasePath()),
-            pool: .init(minimumConnections: 0, maximumConnections: 2),
             logger: logger
         )
         let client = SQLiteClient(configuration: configuration)

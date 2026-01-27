@@ -23,7 +23,6 @@ struct SQLiteDatabaseTestSuite {
 
         let configuration = SQLiteClient.Configuration(
             storage: .memory,
-            pool: .init(minimumConnections: 1, maximumConnections: 1),
             logger: logger
         )
 

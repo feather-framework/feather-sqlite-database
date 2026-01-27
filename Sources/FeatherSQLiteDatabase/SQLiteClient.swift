@@ -12,53 +12,66 @@ import SQLiteNIO
 /// A SQLite client backed by a connection pool.
 ///
 /// Use this client to execute queries and transactions concurrently.
-public final class SQLiteClient: Sendable, DatabaseClient {
+public final class SQLiteClient: Sendable {
 
-    /// The SQLite connection type leased from the pool.
-    public typealias Connection = SQLiteConnection
-
-    /// Configuration options for a SQLite client.
+    /// Configuration values for a pooled SQLite client.
     public struct Configuration: Sendable {
-        /// Connection pool settings.
-        public struct Pool: Sendable {
-            /// Minimum number of pooled connections to keep open.
-            public var minimumConnections: Int
-            /// Maximum number of pooled connections to allow.
-            public var maximumConnections: Int
 
-            /// Create a connection pool configuration.
-            /// - Parameters:
-            ///   - minimumConnections: The minimum number of connections to keep open.
-            ///   - maximumConnections: The maximum number of connections to allow.
-            public init(
-                minimumConnections: Int = 0,
-                maximumConnections: Int = 4
-            ) {
-                self.minimumConnections = minimumConnections
-                self.maximumConnections = maximumConnections
-            }
+        /// SQLite journal mode options for new connections.
+        public enum JournalMode: String, Sendable {
+            /// Roll back changes by copying the original content.
+            case delete = "DELETE"
+            /// Roll back changes by truncating the rollback journal.
+            case truncate = "TRUNCATE"
+            /// Roll back changes by zeroing the journal header.
+            case persist = "PERSIST"
+            /// Keep the journal in memory.
+            case memory = "MEMORY"
+            /// Use write-ahead logging to improve concurrency.
+            case wal = "WAL"
+            /// Disable the rollback journal.
+            case off = "OFF"
         }
 
         /// The SQLite storage to open connections against.
-        public var storage: SQLiteConnection.Storage
-        /// The connection pool configuration.
-        public var pool: Pool
-        /// The logger used for pool operations.
-        public var logger: Logger
+        public let storage: SQLiteConnection.Storage
+        /// Minimum number of pooled connections to keep open.
+        public let minimumConnections: Int
+        /// Maximum number of pooled connections to allow.
+        public let maximumConnections: Int
+        /// Logger used for pool operations.
+        public let logger: Logger
+        /// Journal mode applied to each pooled connection.
+        public let journalMode: JournalMode
+        /// Busy timeout, in milliseconds, applied to each pooled connection.
+        public let busyTimeoutMilliseconds: Int
 
         /// Create a SQLite client configuration.
         /// - Parameters:
         ///   - storage: The SQLite storage to use.
-        ///   - pool: The pool configuration.
         ///   - logger: The logger for database operations.
+        ///   - minimumConnections: The minimum number of pooled connections.
+        ///   - maximumConnections: The maximum number of pooled connections.
+        ///   - journalMode: The journal mode to apply to connections.
+        ///   - busyTimeoutMilliseconds: The busy timeout to apply, in milliseconds.
         public init(
             storage: SQLiteConnection.Storage,
-            pool: Pool,
-            logger: Logger
+            logger: Logger,
+            minimumConnections: Int = 1,
+            maximumConnections: Int = 8,
+            journalMode: JournalMode = .wal,
+            busyTimeoutMilliseconds: Int = 1000
         ) {
+            precondition(minimumConnections >= 0)
+            precondition(maximumConnections >= 1)
+            precondition(minimumConnections <= maximumConnections)
+            precondition(busyTimeoutMilliseconds >= 0)
             self.storage = storage
-            self.pool = pool
+            self.minimumConnections = minimumConnections
+            self.maximumConnections = maximumConnections
             self.logger = logger
+            self.journalMode = journalMode
+            self.busyTimeoutMilliseconds = busyTimeoutMilliseconds
         }
     }
 
@@ -68,14 +81,11 @@ public final class SQLiteClient: Sendable, DatabaseClient {
     /// - Parameter configuration: The client configuration.
     public init(configuration: Configuration) {
         self.pool = SQLiteConnectionPool(
-            configuration: .init(
-                storage: configuration.storage,
-                minimumConnections: configuration.pool.minimumConnections,
-                maximumConnections: configuration.pool.maximumConnections,
-                logger: configuration.logger
-            )
+            configuration: configuration
         )
     }
+
+    // MARK: - pool service
 
     /// Pre-open the minimum number of connections.
     public func run() async throws {
@@ -88,6 +98,24 @@ public final class SQLiteClient: Sendable, DatabaseClient {
     }
 
     // MARK: - database api
+
+    /// Execute a query using a managed connection.
+    ///
+    /// This default implementation executes the query inside `connection(_:)`.
+    /// - Parameters:
+    ///   - isolation: The actor isolation to use for the duration of the call.
+    ///   - query: The query to execute.
+    /// - Throws: A `DatabaseError` if execution fails.
+    /// - Returns: The query result.
+    @discardableResult
+    public func execute(
+        isolation: isolated (any Actor)? = #isolation,
+        query: SQLiteConnection.Query,
+    ) async throws(DatabaseError) -> SQLiteConnection.Result {
+        try await connection(isolation: isolation) { connection in
+            try await connection.execute(query: query)
+        }
+    }
 
     /// Execute work using a leased connection.
     ///
@@ -182,6 +210,8 @@ public final class SQLiteClient: Sendable, DatabaseClient {
             throw DatabaseError.transaction(txError)
         }
     }
+
+    // MARK: - pool
 
     func connectionCount() async -> Int {
         await pool.connectionCount()

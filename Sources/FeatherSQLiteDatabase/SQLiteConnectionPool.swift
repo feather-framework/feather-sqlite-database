@@ -8,43 +8,25 @@
 import Logging
 import SQLiteNIO
 
+enum SQLiteConnectionPoolError: Error, Sendable {
+    case shutdown
+}
+
 actor SQLiteConnectionPool {
-
-    struct Configuration: Sendable {
-        let storage: SQLiteConnection.Storage
-        let minimumConnections: Int
-        let maximumConnections: Int
-        let logger: Logger
-
-        init(
-            storage: SQLiteConnection.Storage,
-            minimumConnections: Int,
-            maximumConnections: Int,
-            logger: Logger
-        ) {
-            precondition(minimumConnections >= 0)
-            precondition(maximumConnections >= 1)
-            precondition(minimumConnections <= maximumConnections)
-            self.storage = storage
-            self.minimumConnections = minimumConnections
-            self.maximumConnections = maximumConnections
-            self.logger = logger
-        }
-    }
 
     private struct Waiter {
         let id: Int
         let continuation: CheckedContinuation<SQLiteConnection, Error>
     }
 
-    private let configuration: Configuration
+    private let configuration: SQLiteClient.Configuration
     private var availableConnections: [SQLiteConnection] = []
     private var waiters: [Waiter] = []
     private var totalConnections = 0
     private var nextWaiterID = 0
     private var isShutdown = false
 
-    init(configuration: Configuration) {
+    init(configuration: SQLiteClient.Configuration) {
         self.configuration = configuration
     }
 
@@ -141,10 +123,33 @@ actor SQLiteConnectionPool {
     }
 
     private func makeConnection() async throws -> SQLiteConnection {
-        try await SQLiteConnection.open(
+        let connection = try await SQLiteConnection.open(
             storage: configuration.storage,
             logger: configuration.logger
         )
+        do {
+            _ = try await connection.query(
+                "PRAGMA journal_mode = \(configuration.journalMode.rawValue);",
+                []
+            )
+            _ = try await connection.query(
+                "PRAGMA busy_timeout = \(configuration.busyTimeoutMilliseconds);",
+                []
+            )
+        }
+        catch {
+            do {
+                try await connection.close()
+            }
+            catch {
+                configuration.logger.warning(
+                    "Failed to close SQLite connection after setup error",
+                    metadata: ["error": "\(error)"]
+                )
+            }
+            throw error
+        }
+        return connection
     }
 
     private func closeConnection(_ connection: SQLiteConnection) async {
