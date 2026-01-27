@@ -2,7 +2,11 @@
 
 SQLite driver implementation for the abstract [Feather Database](https://github.com/feather-framework/feather-database) Swift API package.
 
-![Release: 1.0.0-beta.1](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E1-F05138)
+[
+    ![Release: 1.0.0-beta.2](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E2-F05138)
+](
+    https://github.com/feather-framework/feather-sqlite-database/releases/tag/1.0.0-beta.2
+)
 
 ## Features
 
@@ -33,7 +37,7 @@ SQLite driver implementation for the abstract [Feather Database](https://github.
 Add the dependency to your `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/feather-framework/feather-sqlite-database", exact: "1.0.0-beta.1"),
+.package(url: "https://github.com/feather-framework/feather-sqlite-database", exact: "1.0.0-beta.2"),
 ```
 
 Then add `FeatherSQLiteDatabase` to your target dependencies:
@@ -45,7 +49,11 @@ Then add `FeatherSQLiteDatabase` to your target dependencies:
 
 ## Usage
  
-![DocC API documentation](https://img.shields.io/badge/DocC-API_documentation-F05138)
+[
+    ![DocC API documentation](https://img.shields.io/badge/DocC-API_documentation-F05138)
+](
+    https://feather-framework.github.io/feather-sqlite-database/documentation/feathersqlitedatabase/
+)
 
 API documentation is available at the following link. 
 
@@ -61,15 +69,15 @@ import FeatherSQLiteDatabase
 var logger = Logger(label: "example")
 logger.logLevel = .info
 
-let connection = try await SQLiteConnection.open(
+let configuration = SQLiteClient.Configuration(
     storage: .file(path: "/Users/me/db.sqlite"),
     logger: logger
 )
 
-let database = SQLiteDatabaseClient(
-    connection: connection,
-    logger: logger
-)
+let client = SQLiteClient(configuration: configuration)
+try await client.run()
+
+let database = SQLiteDatabaseClient(client: client)
 
 let result = try await database.execute(
     query: #"""
@@ -85,7 +93,7 @@ for try await item in result {
     print(version)
 }
 
-try await connection.close()
+await client.shutdown()
 ```
 
 > [!WARNING]  
@@ -104,7 +112,7 @@ The following database driver implementations are available for use:
 - Build: `swift build`
 - Test: 
     - local: `swift test`
-    - using Docker: `swift docker-test`
+    - using Docker: `make docker-test`
 - Format: `make format`
 - Check: `make check`
 

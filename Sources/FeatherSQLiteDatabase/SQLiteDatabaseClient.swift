@@ -6,7 +6,6 @@
 //
 
 import FeatherDatabase
-import Logging
 import SQLiteNIO
 
 /// A SQLite-backed database client.
@@ -14,47 +13,48 @@ import SQLiteNIO
 /// Use this client to execute queries and manage transactions on SQLite.
 public struct SQLiteDatabaseClient: DatabaseClient {
 
-    var connection: SQLiteConnection
-    var logger: Logger
+    private let client: SQLiteClient
 
-    /// Create a SQLite database client.
+    /// Create a SQLite database client backed by a connection pool.
     ///
-    /// Use this initializer to provide an already-open connection.
-    /// - Parameters:
-    ///   - connection: The SQLite connection to use.
-    ///   - logger: The logger for database operations.
-    public init(
-        connection: SQLiteConnection,
-        logger: Logger
-    ) {
-        self.connection = connection
-        self.logger = logger
+    /// - Parameter client: The SQLite client to use.
+    public init(client: SQLiteClient) {
+        self.client = client
+    }
+
+    /// Create a SQLite database client backed by a connection pool.
+    ///
+    /// - Parameter configuration: The SQLite client configuration.
+    public init(configuration: SQLiteClient.Configuration) {
+        self.client = SQLiteClient(configuration: configuration)
+    }
+
+    /// Pre-open the minimum number of connections.
+    public func run() async throws {
+        try await client.run()
+    }
+
+    /// Close all pooled connections and refuse new leases.
+    public func shutdown() async {
+        await client.shutdown()
     }
 
     // MARK: - database api
 
-    /// Execute work using the stored connection.
+    /// Execute work using a leased connection.
     ///
-    /// The closure is executed with the current connection.
+    /// The closure is executed with a pooled connection.
     /// - Parameters:
     ///   - isolation: The actor isolation to use for the closure.
     ///   - closure: A closure that receives the SQLite connection.
     /// - Throws: A `DatabaseError` if the connection fails.
     /// - Returns: The query result produced by the closure.
     @discardableResult
-    public func connection(
+    public func connection<T>(
         isolation: isolated (any Actor)? = #isolation,
-        _ closure: (SQLiteConnection) async throws -> sending SQLiteQueryResult
-    ) async throws(DatabaseError) -> sending SQLiteQueryResult {
-        do {
-            return try await closure(connection)
-        }
-        catch let error as DatabaseError {
-            throw error
-        }
-        catch {
-            throw .connection(error)
-        }
+        _ closure: (SQLiteConnection) async throws -> sending T
+    ) async throws(DatabaseError) -> sending T {
+        try await client.connection(isolation: isolation, closure)
     }
 
     /// Execute work inside a SQLite transaction.
@@ -66,56 +66,11 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     /// - Throws: A `DatabaseError` if transaction handling fails.
     /// - Returns: The query result produced by the closure.
     @discardableResult
-    public func transaction(
+    public func transaction<T>(
         isolation: isolated (any Actor)? = #isolation,
-        _ closure: (SQLiteConnection) async throws -> sending SQLiteQueryResult
-    ) async throws(DatabaseError) -> sending SQLiteQueryResult {
-
-        do {
-            try await connection.execute(query: "BEGIN;")
-        }
-        catch {
-            throw DatabaseError.transaction(
-                SQLiteTransactionError(beginError: error)
-            )
-        }
-
-        var closureHasFinished = false
-
-        do {
-            let result = try await closure(connection)
-            closureHasFinished = true
-
-            do {
-                try await connection.execute(query: "COMMIT;")
-            }
-            catch {
-                throw DatabaseError.transaction(
-                    SQLiteTransactionError(commitError: error)
-                )
-            }
-
-            return result
-        }
-        catch {
-            var txError = SQLiteTransactionError()
-
-            if !closureHasFinished {
-                txError.closureError = error
-
-                do {
-                    try await connection.execute(query: "ROLLBACK;")
-                }
-                catch {
-                    txError.rollbackError = error
-                }
-            }
-            else {
-                txError.commitError = error
-            }
-
-            throw DatabaseError.transaction(txError)
-        }
+        _ closure: (SQLiteConnection) async throws -> sending T
+    ) async throws(DatabaseError) -> sending T {
+        try await client.transaction(isolation: isolation, closure)
     }
 
 }

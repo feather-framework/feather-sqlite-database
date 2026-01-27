@@ -21,28 +21,23 @@ struct SQLiteDatabaseTestSuite {
         var logger = Logger(label: "test")
         logger.logLevel = .info
 
-        let connection = try await SQLiteConnection.open(
+        let configuration = SQLiteClient.Configuration(
             storage: .memory,
             logger: logger
         )
 
-        let database = SQLiteDatabaseClient(
-            connection: connection,
-            logger: logger
-        )
+        let client = SQLiteClient(configuration: configuration)
 
+        let database = SQLiteDatabaseClient(client: client)
+
+        try await client.run()
         try await closure(database)
-
-        try await connection.close()
+        await client.shutdown()
     }
 
     @Test
     func foreignKeySupport() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            try await database.execute(
-                query: "PRAGMA foreign_keys = ON"
-            )
 
             let result =
                 try await database.execute(
