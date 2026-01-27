@@ -26,7 +26,9 @@ actor SQLiteConnectionPool {
     private var nextWaiterID = 0
     private var isShutdown = false
 
-    init(configuration: SQLiteClient.Configuration) {
+    init(
+        configuration: SQLiteClient.Configuration
+    ) {
         self.configuration = configuration
     }
 
@@ -76,7 +78,9 @@ actor SQLiteConnectionPool {
         }
     }
 
-    func releaseConnection(_ connection: SQLiteConnection) async {
+    func releaseConnection(
+        _ connection: SQLiteConnection
+    ) async {
         if isShutdown {
             await closeConnection(connection)
             return
@@ -114,7 +118,9 @@ actor SQLiteConnectionPool {
         totalConnections
     }
 
-    private func cancelWaiter(id: Int) {
+    private func cancelWaiter(
+        id: Int
+    ) {
         guard let index = waiters.firstIndex(where: { $0.id == id }) else {
             return
         }
@@ -128,13 +134,13 @@ actor SQLiteConnectionPool {
             logger: configuration.logger
         )
         do {
-            _ = try await connection.query(
-                "PRAGMA journal_mode = \(configuration.journalMode.rawValue);",
-                []
+            _ = try await connection.execute(
+                query:
+                    "PRAGMA journal_mode = \(unescaped: configuration.journalMode.rawValue);"
             )
-            _ = try await connection.query(
-                "PRAGMA busy_timeout = \(configuration.busyTimeoutMilliseconds);",
-                []
+            _ = try await connection.execute(
+                query:
+                    "PRAGMA busy_timeout = \(unescaped: String(configuration.busyTimeoutMilliseconds));"
             )
         }
         catch {
@@ -152,7 +158,9 @@ actor SQLiteConnectionPool {
         return connection
     }
 
-    private func closeConnection(_ connection: SQLiteConnection) async {
+    private func closeConnection(
+        _ connection: SQLiteConnection
+    ) async {
         do {
             try await connection.close()
         }
