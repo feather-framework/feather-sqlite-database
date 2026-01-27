@@ -5,10 +5,10 @@
 //  Created by Tibor Bödecs on 2026. 01. 26..
 //
 
-import Logging
-import Testing
 import FeatherDatabase
+import Logging
 import SQLiteNIO
+import Testing
 
 @testable import FeatherSQLiteDatabase
 
@@ -94,19 +94,19 @@ struct SQLiteClientTestSuite {
                     """#
             )
         }
-        
+
         do {
-            
+
             _ = try await (first, second)
-            
+
             let result = try await client.execute(
                 query: #"""
-                SELECT COUNT(*) AS "count"
-                FROM "items";
-                """#
+                    SELECT COUNT(*) AS "count"
+                    FROM "items";
+                    """#
             )
             let rows = try await result.collect()
-            
+
             #expect(try rows[0].decode(column: "count", as: Int.self) == 2)
             #expect(await client.connectionCount() == 2)
         }

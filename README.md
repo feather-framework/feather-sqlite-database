@@ -69,15 +69,14 @@ import FeatherSQLiteDatabase
 var logger = Logger(label: "example")
 logger.logLevel = .info
 
-let connection = try await SQLiteConnection.open(
+let configuration = SQLiteClient.Configuration(
     storage: .file(path: "/Users/me/db.sqlite"),
+    pool: .init(minimumConnections: 1, maximumConnections: 4),
     logger: logger
 )
 
-let database = SQLiteDatabaseClient(
-    connection: connection,
-    logger: logger
-)
+let database = SQLiteDatabaseClient(configuration: configuration)
+try await database.run()
 
 let result = try await database.execute(
     query: #"""
@@ -93,7 +92,7 @@ for try await item in result {
     print(version)
 }
 
-try await connection.close()
+await database.shutdown()
 ```
 
 > [!WARNING]  

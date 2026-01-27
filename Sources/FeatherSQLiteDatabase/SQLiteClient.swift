@@ -14,13 +14,22 @@ import SQLiteNIO
 /// Use this client to execute queries and transactions concurrently.
 public final class SQLiteClient: Sendable, DatabaseClient {
 
+    /// The SQLite connection type leased from the pool.
     public typealias Connection = SQLiteConnection
 
+    /// Configuration options for a SQLite client.
     public struct Configuration: Sendable {
+        /// Connection pool settings.
         public struct Pool: Sendable {
+            /// Minimum number of pooled connections to keep open.
             public var minimumConnections: Int
+            /// Maximum number of pooled connections to allow.
             public var maximumConnections: Int
 
+            /// Create a connection pool configuration.
+            /// - Parameters:
+            ///   - minimumConnections: The minimum number of connections to keep open.
+            ///   - maximumConnections: The maximum number of connections to allow.
             public init(
                 minimumConnections: Int = 0,
                 maximumConnections: Int = 4
@@ -30,14 +39,22 @@ public final class SQLiteClient: Sendable, DatabaseClient {
             }
         }
 
+        /// The SQLite storage to open connections against.
         public var storage: SQLiteConnection.Storage
+        /// The connection pool configuration.
         public var pool: Pool
+        /// The logger used for pool operations.
         public var logger: Logger
 
+        /// Create a SQLite client configuration.
+        /// - Parameters:
+        ///   - storage: The SQLite storage to use.
+        ///   - pool: The pool configuration.
+        ///   - logger: The logger for database operations.
         public init(
             storage: SQLiteConnection.Storage,
-            pool: Pool = .init(),
-            logger: Logger = .init(label: "codes.feather.sqlite")
+            pool: Pool,
+            logger: Logger
         ) {
             self.storage = storage
             self.pool = pool
@@ -47,6 +64,8 @@ public final class SQLiteClient: Sendable, DatabaseClient {
 
     private let pool: SQLiteConnectionPool
 
+    /// Create a SQLite client with a connection pool.
+    /// - Parameter configuration: The client configuration.
     public init(configuration: Configuration) {
         self.pool = SQLiteConnectionPool(
             configuration: .init(
@@ -70,6 +89,14 @@ public final class SQLiteClient: Sendable, DatabaseClient {
 
     // MARK: - database api
 
+    /// Execute work using a leased connection.
+    ///
+    /// The connection is returned to the pool when the closure completes.
+    /// - Parameters:
+    ///   - isolation: The actor isolation to use for the closure.
+    ///   - closure: A closure that receives a SQLite connection.
+    /// - Throws: A `DatabaseError` if leasing or execution fails.
+    /// - Returns: The result produced by the closure.
     @discardableResult
     public func connection<T>(
         isolation: isolated (any Actor)? = #isolation,
@@ -91,6 +118,14 @@ public final class SQLiteClient: Sendable, DatabaseClient {
         }
     }
 
+    /// Execute work inside a SQLite transaction.
+    ///
+    /// The transaction is committed on success and rolled back on failure.
+    /// - Parameters:
+    ///   - isolation: The actor isolation to use for the closure.
+    ///   - closure: A closure that receives a SQLite connection.
+    /// - Throws: A `DatabaseError` if transaction handling fails.
+    /// - Returns: The result produced by the closure.
     @discardableResult
     public func transaction<T>(
         isolation: isolated (any Actor)? = #isolation,
@@ -153,7 +188,8 @@ public final class SQLiteClient: Sendable, DatabaseClient {
     }
 
     private func leaseConnection() async throws(DatabaseError)
-        -> SQLiteConnection {
+        -> SQLiteConnection
+    {
         do {
             return try await pool.leaseConnection()
         }
