@@ -102,6 +102,7 @@ public final class SQLiteClient: Sendable {
     /// Execute a query using a managed connection.
     ///
     /// This default implementation executes the query inside `connection(_:)`.
+    /// Busy errors are retried with an exponential backoff (up to 8 attempts).
     /// - Parameters:
     ///   - isolation: The actor isolation to use for the duration of the call.
     ///   - query: The query to execute.
@@ -112,8 +113,29 @@ public final class SQLiteClient: Sendable {
         isolation: isolated (any Actor)? = #isolation,
         query: SQLiteConnection.Query,
     ) async throws(DatabaseError) -> SQLiteConnection.Result {
-        try await connection(isolation: isolation) { connection in
-            try await connection.execute(query: query)
+        let maxAttempts = 8
+        var attempt = 0
+
+        while true {
+            do {
+                return try await connection(isolation: isolation) {
+                    connection in
+                    try await connection.execute(query: query)
+                }
+            }
+            catch let error as DatabaseError {
+                attempt += 1
+                if attempt >= maxAttempts || !isBusyError(error) {
+                    throw error
+                }
+                let delayMilliseconds = min(1000, 25 << (attempt - 1))
+                do {
+                    try await Task.sleep(for: .milliseconds(delayMilliseconds))
+                }
+                catch {
+                    throw error
+                }
+            }
         }
     }
 
@@ -226,5 +248,11 @@ public final class SQLiteClient: Sendable {
         catch {
             throw .connection(error)
         }
+    }
+
+    private func isBusyError(_ error: DatabaseError) -> Bool {
+        let message = String(describing: error).lowercased()
+        return message.contains("database is locked")
+            || message.contains("busy")
     }
 }
