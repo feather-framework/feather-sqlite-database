@@ -129,6 +129,12 @@ struct SQLiteClientTestSuite {
             }
 
             try await database.execute(
+                query: "PRAGMA journal_mode = WAL;"
+            )
+            try await database.execute(
+                query: "PRAGMA busy_timeout = 5000;"
+            )
+            try await database.execute(
                 query: #"""
                     DROP TABLE IF EXISTS "\#(unescaped: table)";
                     """#
@@ -163,7 +169,7 @@ struct SQLiteClientTestSuite {
             func getValidAccessToken(sessionID: String) async throws -> String {
                 try await database.transaction { connection in
                     try await connection.execute(
-                        query: "PRAGMA busy_timeout = 1000;"
+                        query: "PRAGMA busy_timeout = 5000;"
                     )
 
                     let updateResult = try await connection.execute(
