@@ -123,7 +123,7 @@ public final class SQLiteClient: Sendable {
                     try await connection.execute(query: query)
                 }
             }
-            catch let error as DatabaseError {
+            catch {
                 attempt += 1
                 if attempt >= maxAttempts || !isBusyError(error) {
                     throw error
@@ -133,7 +133,7 @@ public final class SQLiteClient: Sendable {
                     try await Task.sleep(for: .milliseconds(delayMilliseconds))
                 }
                 catch {
-                    throw error
+                    throw .query(error)
                 }
             }
         }
