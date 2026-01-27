@@ -142,6 +142,10 @@ actor SQLiteConnectionPool {
                 query:
                     "PRAGMA busy_timeout = \(unescaped: String(configuration.busyTimeoutMilliseconds));"
             )
+            _ = try await connection.execute(
+                query:
+                    "PRAGMA foreign_keys = \(unescaped: configuration.foreignKeysMode.rawValue);"
+            )
         }
         catch {
             do {

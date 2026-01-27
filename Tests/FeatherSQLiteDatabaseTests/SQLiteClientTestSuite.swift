@@ -56,9 +56,6 @@ struct SQLiteClientTestSuite {
         try await client.run()
 
         try await client.execute(
-            query: "PRAGMA journal_mode = WAL;"
-        )
-        try await client.execute(
             query: #"""
                 CREATE TABLE "items" (
                     "id" INTEGER NOT NULL PRIMARY KEY,
@@ -68,8 +65,7 @@ struct SQLiteClientTestSuite {
         )
 
         async let first: Void = client.transaction { connection in
-            try await connection.execute(query: "PRAGMA busy_timeout = 1000;")
-            try await Task.sleep(for: .milliseconds(200))
+
             try await connection.execute(
                 query: #"""
                     INSERT INTO "items"
@@ -81,8 +77,6 @@ struct SQLiteClientTestSuite {
         }
 
         async let second: Void = client.transaction { connection in
-            try await connection.execute(query: "PRAGMA busy_timeout = 1000;")
-            try await Task.sleep(for: .milliseconds(200))
             try await connection.execute(
                 query: #"""
                     INSERT INTO "items"
@@ -127,12 +121,6 @@ struct SQLiteClientTestSuite {
             }
 
             try await database.execute(
-                query: "PRAGMA journal_mode = WAL;"
-            )
-            try await database.execute(
-                query: "PRAGMA busy_timeout = 5000;"
-            )
-            try await database.execute(
                 query: #"""
                     DROP TABLE IF EXISTS "\#(unescaped: table)";
                     """#
@@ -166,9 +154,6 @@ struct SQLiteClientTestSuite {
 
             func getValidAccessToken(sessionID: String) async throws -> String {
                 try await database.transaction { connection in
-                    try await connection.execute(
-                        query: "PRAGMA busy_timeout = 5000;"
-                    )
 
                     let updateResult = try await connection.execute(
                         query: #"""

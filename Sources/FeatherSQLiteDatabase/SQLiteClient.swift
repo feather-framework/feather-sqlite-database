@@ -33,6 +33,14 @@ public final class SQLiteClient: Sendable {
             case off = "OFF"
         }
 
+        /// SQLite foreign key enforcement options for new connections.
+        public enum ForeignKeysMode: String, Sendable {
+            /// Disable foreign key enforcement.
+            case off = "OFF"
+            /// Enable foreign key enforcement.
+            case on = "ON"
+        }
+
         /// The SQLite storage to open connections against.
         public let storage: SQLiteConnection.Storage
         /// Minimum number of pooled connections to keep open.
@@ -45,6 +53,8 @@ public final class SQLiteClient: Sendable {
         public let journalMode: JournalMode
         /// Busy timeout, in milliseconds, applied to each pooled connection.
         public let busyTimeoutMilliseconds: Int
+        /// Foreign key enforcement mode applied to each pooled connection.
+        public let foreignKeysMode: ForeignKeysMode
 
         /// Create a SQLite client configuration.
         /// - Parameters:
@@ -53,6 +63,7 @@ public final class SQLiteClient: Sendable {
         ///   - minimumConnections: The minimum number of pooled connections.
         ///   - maximumConnections: The maximum number of pooled connections.
         ///   - journalMode: The journal mode to apply to connections.
+        ///   - foreignKeysMode: The foreign key enforcement mode to apply.
         ///   - busyTimeoutMilliseconds: The busy timeout to apply, in milliseconds.
         public init(
             storage: SQLiteConnection.Storage,
@@ -60,6 +71,7 @@ public final class SQLiteClient: Sendable {
             minimumConnections: Int = 1,
             maximumConnections: Int = 8,
             journalMode: JournalMode = .wal,
+            foreignKeysMode: ForeignKeysMode = .on,
             busyTimeoutMilliseconds: Int = 1000
         ) {
             precondition(minimumConnections >= 0)
@@ -71,6 +83,7 @@ public final class SQLiteClient: Sendable {
             self.maximumConnections = maximumConnections
             self.logger = logger
             self.journalMode = journalMode
+            self.foreignKeysMode = foreignKeysMode
             self.busyTimeoutMilliseconds = busyTimeoutMilliseconds
         }
     }

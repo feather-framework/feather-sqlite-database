@@ -39,10 +39,6 @@ struct SQLiteDatabaseTestSuite {
     func foreignKeySupport() async throws {
         try await runUsingTestDatabaseClient { database in
 
-            try await database.execute(
-                query: "PRAGMA foreign_keys = ON"
-            )
-
             let result =
                 try await database.execute(
                     query: "PRAGMA foreign_keys"
