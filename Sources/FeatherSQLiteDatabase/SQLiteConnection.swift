@@ -20,15 +20,29 @@ extension SQLiteConnection: @retroactive DatabaseConnection {
     public func execute(
         query: SQLiteQuery
     ) async throws(DatabaseError) -> SQLiteQueryResult {
-        do {
-            let result = try await self.query(
-                query.sql,
-                query.bindings
-            )
-            return SQLiteQueryResult(elements: result)
-        }
-        catch {
-            throw .query(error)
+        let maxAttempts = 8
+        var attempt = 0
+        while true {
+            do {
+                let result = try await self.query(
+                    query.sql,
+                    query.bindings
+                )
+                return SQLiteQueryResult(elements: result)
+            }
+            catch {
+                attempt += 1
+                if attempt >= maxAttempts {
+                    throw .query(error)
+                }
+                let delayMilliseconds = min(1000, 25 << (attempt - 1))
+                do {
+                    try await Task.sleep(for: .milliseconds(delayMilliseconds))
+                }
+                catch {
+                    throw .query(error)
+                }
+            }
         }
     }
 }
