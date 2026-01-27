@@ -171,6 +171,7 @@ public final class SQLiteClient: Sendable {
     /// Execute work inside a SQLite transaction.
     ///
     /// The transaction is committed on success and rolled back on failure.
+    /// Busy errors are retried with an exponential backoff (up to 8 attempts).
     /// - Parameters:
     ///   - isolation: The actor isolation to use for the closure.
     ///   - closure: A closure that receives a SQLite connection.
@@ -178,6 +179,59 @@ public final class SQLiteClient: Sendable {
     /// - Returns: The result produced by the closure.
     @discardableResult
     public func transaction<T>(
+        isolation: isolated (any Actor)? = #isolation,
+        _ closure: (SQLiteConnection) async throws -> sending T
+    ) async throws(DatabaseError) -> sending T {
+        let maxAttempts = 8
+        var attempt = 0
+
+        while true {
+            do {
+                return try await transactionOnce(
+                    isolation: isolation,
+                    closure
+                )
+            }
+            catch {
+                attempt += 1
+                if attempt >= maxAttempts || !isBusyError(error) {
+                    throw error
+                }
+                let delayMilliseconds = min(1000, 25 << (attempt - 1))
+                do {
+                    try await Task.sleep(for: .milliseconds(delayMilliseconds))
+                }
+                catch {
+                    throw .query(error)
+                }
+            }
+        }
+    }
+
+    // MARK: - pool
+
+    func connectionCount() async -> Int {
+        await pool.connectionCount()
+    }
+
+    private func leaseConnection() async throws(DatabaseError)
+        -> SQLiteConnection
+    {
+        do {
+            return try await pool.leaseConnection()
+        }
+        catch {
+            throw .connection(error)
+        }
+    }
+
+    private func isBusyError(_ error: DatabaseError) -> Bool {
+        let message = String(describing: error).lowercased()
+        return message.contains("database is locked")
+            || message.contains("busy")
+    }
+
+    private func transactionOnce<T>(
         isolation: isolated (any Actor)? = #isolation,
         _ closure: (SQLiteConnection) async throws -> sending T
     ) async throws(DatabaseError) -> sending T {
@@ -231,28 +285,5 @@ public final class SQLiteClient: Sendable {
             await pool.releaseConnection(connection)
             throw DatabaseError.transaction(txError)
         }
-    }
-
-    // MARK: - pool
-
-    func connectionCount() async -> Int {
-        await pool.connectionCount()
-    }
-
-    private func leaseConnection() async throws(DatabaseError)
-        -> SQLiteConnection
-    {
-        do {
-            return try await pool.leaseConnection()
-        }
-        catch {
-            throw .connection(error)
-        }
-    }
-
-    private func isBusyError(_ error: DatabaseError) -> Bool {
-        let message = String(describing: error).lowercased()
-        return message.contains("database is locked")
-            || message.contains("busy")
     }
 }
