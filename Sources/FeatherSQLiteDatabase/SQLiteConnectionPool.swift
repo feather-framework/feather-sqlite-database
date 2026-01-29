@@ -168,6 +168,20 @@ actor SQLiteConnectionPool {
         do {
             try await connection.close()
         }
+        catch is CancellationError {
+            let logger = configuration.logger
+            Task.detached {
+                do {
+                    try await connection.close()
+                }
+                catch {
+                    logger.warning(
+                        "Failed to close SQLite connection after cancellation",
+                        metadata: ["error": "\(error)"]
+                    )
+                }
+            }
+        }
         catch {
             configuration.logger.warning(
                 "Failed to close SQLite connection",

@@ -25,7 +25,8 @@ struct SQLiteClientTestSuite {
     }
 
     private func runUsingTestClient(
-        _ closure: (SQLiteClient) async throws -> Void
+        _ closure:
+            @escaping (@Sendable (SQLiteDatabaseClient) async throws -> Void)
     ) async throws {
         var logger = Logger(label: "test.sqlite.client")
         logger.logLevel = .info
@@ -35,11 +36,19 @@ struct SQLiteClientTestSuite {
             logger: logger,
         )
         let client = SQLiteClient(configuration: configuration)
+        let service = SQLiteClientService(sqliteClient: client)
+        let database = SQLiteDatabaseClient(client: client)
 
-        try await client.run()
-        defer { Task { await client.shutdown() } }
-
-        try await closure(client)
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await service.run()
+            }
+            group.addTask {
+                try await closure(database)
+            }
+            try await group.next()
+            group.cancelAll()
+        }
     }
 
     @Test
