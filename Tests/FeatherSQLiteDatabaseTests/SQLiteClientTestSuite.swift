@@ -36,19 +36,11 @@ struct SQLiteClientTestSuite {
             logger: logger,
         )
         let client = SQLiteClient(configuration: configuration)
-        let service = SQLiteClientService(sqliteClient: client)
         let database = SQLiteDatabaseClient(client: client)
 
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                try await service.run()
-            }
-            group.addTask {
-                try await closure(database)
-            }
-            try await group.next()
-            group.cancelAll()
-        }
+        try await client.run()
+        try await closure(database)
+        await client.shutdown()
     }
 
     @Test
@@ -259,3 +251,61 @@ struct SQLiteClientTestSuite {
         }
     }
 }
+
+#if ServiceLifecycleSupport
+
+import ServiceLifecycle
+
+extension SQLiteClientTestSuite {
+
+    @Test
+    func serviceLifecycleSupport() async throws {
+        var logger = Logger(label: "test.sqlite.client")
+        logger.logLevel = .info
+
+        let configuration = SQLiteClient.Configuration(
+            storage: .file(path: makeTemporaryDatabasePath()),
+            logger: logger,
+        )
+        let client = SQLiteClient(configuration: configuration)
+        let service = SQLiteClientService(client)
+        let database = SQLiteDatabaseClient(client: client)
+
+        let serviceGroup = ServiceGroup(
+            services: [service],
+            logger: logger
+        )
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await serviceGroup.run()
+            }
+            group.addTask {
+                let result = try await database.execute(
+                    query: #"""
+                        SELECT 
+                            sqlite_version() AS "version" 
+                        WHERE 
+                            1=\#(1);
+                        """#
+                )
+
+                let resultArray = try await result.collect()
+                #expect(resultArray.count == 1)
+
+                let item = resultArray[0]
+                let version = try item.decode(
+                    column: "version",
+                    as: String.self
+                )
+                #expect(version.split(separator: ".").count == 3)
+            }
+            try await group.next()
+
+            try await Task.sleep(for: .milliseconds(100))
+
+            await serviceGroup.triggerGracefulShutdown()
+        }
+    }
+}
+#endif
