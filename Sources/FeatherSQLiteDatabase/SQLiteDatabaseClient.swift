@@ -7,6 +7,7 @@
 
 import FeatherDatabase
 import SQLiteNIO
+import Logging
 
 /// A SQLite-backed database client.
 ///
@@ -15,24 +16,18 @@ public struct SQLiteDatabaseClient: DatabaseClient {
        
     public typealias Connection = SQLiteDatabaseConnection
     
-    
-    private let client: SQLiteClient
+    let client: SQLiteClient
+    var logger: Logger
 
     /// Create a SQLite database client backed by a connection pool.
     ///
     /// - Parameter client: The SQLite client to use.
-    public init(client: SQLiteClient) {
+    public init(
+        client: SQLiteClient,
+        logger: Logger
+    ) {
         self.client = client
-    }
-
-    /// Pre-open the minimum number of connections.
-    public func run() async throws {
-        try await client.run()
-    }
-
-    /// Close all pooled connections and refuse new leases.
-    public func shutdown() async {
-        await client.shutdown()
+        self.logger = logger
     }
 
     // MARK: - database api
@@ -41,7 +36,6 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     ///
     /// The closure is executed with a pooled connection.
     /// - Parameters:
-    ///   - isolation: The actor isolation to use for the closure.
     ///   - closure: A closure that receives the SQLite connection.
     /// - Throws: A `DatabaseError` if the connection fails.
     /// - Returns: The query result produced by the closure.
@@ -49,15 +43,20 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     public func withConnection<T>(
         _ closure: (Connection) async throws -> T
     ) async throws(DatabaseError) -> T {
-        fatalError()
-//        try await client.connection(isolation: isolation, closure)
+        try await client.withConnection { connection in
+            try await closure(
+                SQLiteDatabaseConnection(
+                    connection: connection,
+                    logger: logger
+                )
+            )
+        }
     }
 
     /// Execute work inside a SQLite transaction.
     ///
     /// The closure runs between `BEGIN` and `COMMIT` with rollback on failure.
     /// - Parameters:
-    ///   - isolation: The actor isolation to use for the closure.
     ///   - closure: A closure that receives the SQLite connection.
     /// - Throws: A `DatabaseError` if transaction handling fails.
     /// - Returns: The query result produced by the closure.
@@ -65,8 +64,14 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     public func withTransaction<T>(
         _ closure: (Connection) async throws -> T
     ) async throws(DatabaseError) -> T {
-        fatalError()
-//        try await client.transaction(isolation: isolation, closure)
+        try await client.withTransaction { connection in
+            try await closure(
+                SQLiteDatabaseConnection(
+                    connection: connection,
+                    logger: logger
+                )
+            )
+        }
     }
 
 }

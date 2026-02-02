@@ -8,10 +8,6 @@
 import Logging
 import SQLiteNIO
 
-enum SQLiteConnectionPoolError: Error, Sendable {
-    case shutdown
-}
-
 actor SQLiteDatabaseConnectionPool {
 
     private struct Waiter {
@@ -134,18 +130,15 @@ actor SQLiteDatabaseConnectionPool {
             logger: configuration.logger
         )
         do {
-//            _ = try await connection.execute(
-//                query:
-//                    "PRAGMA journal_mode = \(unescaped: configuration.journalMode.rawValue);"
-//            )
-//            _ = try await connection.execute(
-//                query:
-//                    "PRAGMA busy_timeout = \(unescaped: String(configuration.busyTimeoutMilliseconds));"
-//            )
-//            _ = try await connection.execute(
-//                query:
-//                    "PRAGMA foreign_keys = \(unescaped: configuration.foreignKeysMode.rawValue);"
-//            )
+            _ = try await connection.query(
+                "PRAGMA journal_mode = \(configuration.journalMode.rawValue);"
+            )
+            _ = try await connection.query(
+                    "PRAGMA busy_timeout = \(configuration.busyTimeoutMilliseconds);"
+            )
+            _ = try await connection.query(
+                    "PRAGMA foreign_keys = \(configuration.foreignKeysMode.rawValue);"
+            )
         }
         catch {
             do {
