@@ -254,7 +254,7 @@ struct SQLiteDatabaseTestSuite {
                     """#
             )
 
-            let insert = SQLiteQuery(
+            let insert = SQLiteDatabaseQuery(
                 unsafeSQL: #"""
                     INSERT INTO "widgets"
                         ("id", "name")
@@ -297,7 +297,7 @@ struct SQLiteDatabaseTestSuite {
             )
 
             let body: String? = nil
-            let insert: SQLiteQuery = #"""
+            let insert: SQLiteDatabaseQuery = #"""
                 INSERT INTO "notes"
                     ("id", "body")
                 VALUES
@@ -337,7 +337,7 @@ struct SQLiteDatabaseTestSuite {
             )
 
             let label: SQLiteData = .text("alpha")
-            let insert: SQLiteQuery = #"""
+            let insert: SQLiteDatabaseQuery = #"""
                 INSERT INTO "tags"
                     ("id", "label")
                 VALUES

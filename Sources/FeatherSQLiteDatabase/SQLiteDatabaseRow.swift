@@ -8,7 +8,8 @@
 import FeatherDatabase
 import SQLiteNIO
 
-extension SQLiteRow: @retroactive DatabaseRow {
+public struct SQLiteDatabaseRow: DatabaseRow {
+    var row: SQLiteRow
 
     struct SingleValueDecoder: Decoder, SingleValueDecodingContainer {
 
@@ -91,7 +92,7 @@ extension SQLiteRow: @retroactive DatabaseRow {
         column: String,
         as type: T.Type
     ) throws(DecodingError) -> T {
-        guard let data = self.column(column) else {
+        guard let data = row.column(column) else {
             throw .dataCorrupted(
                 .init(
                     codingPath: [],

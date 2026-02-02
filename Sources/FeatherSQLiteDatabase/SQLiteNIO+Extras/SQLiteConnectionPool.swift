@@ -12,7 +12,7 @@ enum SQLiteConnectionPoolError: Error, Sendable {
     case shutdown
 }
 
-actor SQLiteConnectionPool {
+actor SQLiteDatabaseConnectionPool {
 
     private struct Waiter {
         let id: Int
@@ -134,18 +134,18 @@ actor SQLiteConnectionPool {
             logger: configuration.logger
         )
         do {
-            _ = try await connection.execute(
-                query:
-                    "PRAGMA journal_mode = \(unescaped: configuration.journalMode.rawValue);"
-            )
-            _ = try await connection.execute(
-                query:
-                    "PRAGMA busy_timeout = \(unescaped: String(configuration.busyTimeoutMilliseconds));"
-            )
-            _ = try await connection.execute(
-                query:
-                    "PRAGMA foreign_keys = \(unescaped: configuration.foreignKeysMode.rawValue);"
-            )
+//            _ = try await connection.execute(
+//                query:
+//                    "PRAGMA journal_mode = \(unescaped: configuration.journalMode.rawValue);"
+//            )
+//            _ = try await connection.execute(
+//                query:
+//                    "PRAGMA busy_timeout = \(unescaped: String(configuration.busyTimeoutMilliseconds));"
+//            )
+//            _ = try await connection.execute(
+//                query:
+//                    "PRAGMA foreign_keys = \(unescaped: configuration.foreignKeysMode.rawValue);"
+//            )
         }
         catch {
             do {

@@ -12,7 +12,10 @@ import SQLiteNIO
 ///
 /// Use this client to execute queries and manage transactions on SQLite.
 public struct SQLiteDatabaseClient: DatabaseClient {
-
+       
+    public typealias Connection = SQLiteDatabaseConnection
+    
+    
     private let client: SQLiteClient
 
     /// Create a SQLite database client backed by a connection pool.
@@ -20,13 +23,6 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     /// - Parameter client: The SQLite client to use.
     public init(client: SQLiteClient) {
         self.client = client
-    }
-
-    /// Create a SQLite database client backed by a connection pool.
-    ///
-    /// - Parameter configuration: The SQLite client configuration.
-    public init(configuration: SQLiteClient.Configuration) {
-        self.client = SQLiteClient(configuration: configuration)
     }
 
     /// Pre-open the minimum number of connections.
@@ -50,11 +46,11 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     /// - Throws: A `DatabaseError` if the connection fails.
     /// - Returns: The query result produced by the closure.
     @discardableResult
-    public func connection<T>(
-        isolation: isolated (any Actor)? = #isolation,
-        _ closure: (SQLiteConnection) async throws -> sending T
-    ) async throws(DatabaseError) -> sending T {
-        try await client.connection(isolation: isolation, closure)
+    public func withConnection<T>(
+        _ closure: (Connection) async throws -> T
+    ) async throws(DatabaseError) -> T {
+        fatalError()
+//        try await client.connection(isolation: isolation, closure)
     }
 
     /// Execute work inside a SQLite transaction.
@@ -66,11 +62,11 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     /// - Throws: A `DatabaseError` if transaction handling fails.
     /// - Returns: The query result produced by the closure.
     @discardableResult
-    public func transaction<T>(
-        isolation: isolated (any Actor)? = #isolation,
-        _ closure: (SQLiteConnection) async throws -> sending T
-    ) async throws(DatabaseError) -> sending T {
-        try await client.transaction(isolation: isolation, closure)
+    public func withTransaction<T>(
+        _ closure: (Connection) async throws -> T
+    ) async throws(DatabaseError) -> T {
+        fatalError()
+//        try await client.transaction(isolation: isolation, closure)
     }
 
 }

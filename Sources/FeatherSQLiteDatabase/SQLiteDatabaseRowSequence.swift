@@ -11,21 +11,23 @@ import SQLiteNIO
 /// A query result backed by SQLite rows.
 ///
 /// Use this type to iterate or collect SQLite query results.
-public struct SQLiteQueryResult: DatabaseQueryResult {
-    let elements: [SQLiteRow]
+public struct SQLiteDatabaseRowSequence: DatabaseRowSequence {
+    public typealias Row = SQLiteDatabaseRow
+    
+    let elements: [Row]
 
     /// An async iterator over SQLite rows.
     ///
     /// This iterator traverses the in-memory row list.
     public struct Iterator: AsyncIteratorProtocol {
         var index = 0
-        let elements: [SQLiteRow]
+        let elements: [Row]
 
         /// Return the next row in the sequence.
         ///
         /// This returns `nil` after the last row.
         /// - Returns: The next `SQLiteRow`, or `nil` when finished.
-        public mutating func next() async -> SQLiteRow? {
+        public mutating func next() async -> Row? {
             guard index < elements.count else {
                 return nil
             }
@@ -47,7 +49,7 @@ public struct SQLiteQueryResult: DatabaseQueryResult {
     /// This returns the rows held by the result.
     /// - Throws: An error if collection fails.
     /// - Returns: An array of `SQLiteRow` values.
-    public func collect() async throws -> [SQLiteRow] {
+    public func collect() async throws -> [Row] {
         elements
     }
 }

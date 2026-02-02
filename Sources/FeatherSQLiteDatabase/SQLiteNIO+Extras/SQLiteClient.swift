@@ -13,7 +13,7 @@ import SQLiteNIO
 ///
 /// Use this client to execute queries and transactions concurrently.
 public final class SQLiteClient: Sendable {
-
+    
     /// Configuration values for a pooled SQLite client.
     public struct Configuration: Sendable {
 
@@ -88,12 +88,12 @@ public final class SQLiteClient: Sendable {
         }
     }
 
-    private let pool: SQLiteConnectionPool
+    private let pool: SQLiteDatabaseConnectionPool
 
     /// Create a SQLite client with a connection pool.
     /// - Parameter configuration: The client configuration.
     public init(configuration: Configuration) {
-        self.pool = SQLiteConnectionPool(
+        self.pool = SQLiteDatabaseConnectionPool(
             configuration: configuration
         )
     }
@@ -112,25 +112,6 @@ public final class SQLiteClient: Sendable {
 
     // MARK: - database api
 
-    /// Execute a query using a managed connection.
-    ///
-    /// This default implementation executes the query inside `connection(_:)`.
-    /// Busy errors are retried with an exponential backoff (up to 8 attempts).
-    /// - Parameters:
-    ///   - isolation: The actor isolation to use for the duration of the call.
-    ///   - query: The query to execute.
-    /// - Throws: A `DatabaseError` if execution fails.
-    /// - Returns: The query result.
-    @discardableResult
-    public func execute(
-        isolation: isolated (any Actor)? = #isolation,
-        query: SQLiteConnection.Query,
-    ) async throws(DatabaseError) -> SQLiteConnection.Result {
-        try await connection(isolation: isolation) { connection in
-            try await connection.execute(query: query)
-        }
-    }
-
     /// Execute work using a leased connection.
     ///
     /// The connection is returned to the pool when the closure completes.
@@ -144,20 +125,21 @@ public final class SQLiteClient: Sendable {
         isolation: isolated (any Actor)? = #isolation,
         _ closure: (SQLiteConnection) async throws -> sending T
     ) async throws(DatabaseError) -> sending T {
-        let connection = try await leaseConnection()
-        do {
-            let result = try await closure(connection)
-            await pool.releaseConnection(connection)
-            return result
-        }
-        catch let error as DatabaseError {
-            await pool.releaseConnection(connection)
-            throw error
-        }
-        catch {
-            await pool.releaseConnection(connection)
-            throw .connection(error)
-        }
+        fatalError()
+//        let connection = try await leaseConnection()
+//        do {
+//            let result = try await closure(connection)
+//            await pool.releaseConnection(connection)
+//            return result
+//        }
+//        catch let error as DatabaseError {
+//            await pool.releaseConnection(connection)
+//            throw error
+//        }
+//        catch {
+//            await pool.releaseConnection(connection)
+//            throw .connection(error)
+//        }
     }
 
     /// Execute work inside a SQLite transaction.
@@ -174,56 +156,57 @@ public final class SQLiteClient: Sendable {
         isolation: isolated (any Actor)? = #isolation,
         _ closure: (SQLiteConnection) async throws -> sending T
     ) async throws(DatabaseError) -> sending T {
-        let connection = try await leaseConnection()
-        do {
-            try await connection.execute(query: "BEGIN;")
-        }
-        catch {
-            await pool.releaseConnection(connection)
-            throw DatabaseError.transaction(
-                SQLiteTransactionError(beginError: error)
-            )
-        }
-
-        var closureHasFinished = false
-
-        do {
-            let result = try await closure(connection)
-            closureHasFinished = true
-
-            do {
-                try await connection.execute(query: "COMMIT;")
-            }
-            catch {
-                await pool.releaseConnection(connection)
-                throw DatabaseError.transaction(
-                    SQLiteTransactionError(commitError: error)
-                )
-            }
-
-            await pool.releaseConnection(connection)
-            return result
-        }
-        catch {
-            var txError = SQLiteTransactionError()
-
-            if !closureHasFinished {
-                txError.closureError = error
-
-                do {
-                    try await connection.execute(query: "ROLLBACK;")
-                }
-                catch {
-                    txError.rollbackError = error
-                }
-            }
-            else {
-                txError.commitError = error
-            }
-
-            await pool.releaseConnection(connection)
-            throw DatabaseError.transaction(txError)
-        }
+        fatalError()
+//        let connection = try await leaseConnection()
+//        do {
+//            try await connection.execute(query: "BEGIN;")
+//        }
+//        catch {
+//            await pool.releaseConnection(connection)
+//            throw DatabaseError.transaction(
+//                SQLiteDatabaseTransactionError(beginError: error)
+//            )
+//        }
+//
+//        var closureHasFinished = false
+//
+//        do {
+//            let result = try await closure(connection)
+//            closureHasFinished = true
+//
+//            do {
+//                try await connection.execute(query: "COMMIT;")
+//            }
+//            catch {
+//                await pool.releaseConnection(connection)
+//                throw DatabaseError.transaction(
+//                    SQLiteDatabaseTransactionError(commitError: error)
+//                )
+//            }
+//
+//            await pool.releaseConnection(connection)
+//            return result
+//        }
+//        catch {
+//            var txError = SQLiteDatabaseTransactionError()
+//
+//            if !closureHasFinished {
+//                txError.closureError = error
+//
+//                do {
+//                    try await connection.execute(query: "ROLLBACK;")
+//                }
+//                catch {
+//                    txError.rollbackError = error
+//                }
+//            }
+//            else {
+//                txError.commitError = error
+//            }
+//
+//            await pool.releaseConnection(connection)
+//            throw DatabaseError.transaction(txError)
+//        }
     }
 
     // MARK: - pool

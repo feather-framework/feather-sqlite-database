@@ -7,8 +7,15 @@
 
 import FeatherDatabase
 import SQLiteNIO
+import Logging
 
-extension SQLiteConnection: @retroactive DatabaseConnection {
+public struct SQLiteDatabaseConnection: DatabaseConnection {
+    
+    public typealias Query = SQLiteDatabaseQuery
+    public typealias RowSequence = SQLiteDatabaseRowSequence
+
+    var connection: SQLiteConnection
+    public var logger: Logger
 
     /// Execute a SQLite query on this connection.
     ///
@@ -17,18 +24,25 @@ extension SQLiteConnection: @retroactive DatabaseConnection {
     /// - Throws: A `DatabaseError` if the query fails.
     /// - Returns: A query result containing the returned rows.
     @discardableResult
-    public func execute(
-        query: SQLiteQuery
-    ) async throws(DatabaseError) -> SQLiteQueryResult {
+    public func run<T: Sendable>(
+        query: Query,
+        _ handler: (RowSequence) async throws -> T = { _ in }
+    ) async throws(DatabaseError) -> T {
+
         let maxAttempts = 8
         var attempt = 0
         while true {
             do {
-                let result = try await self.query(
+                let result = try await connection.query(
                     query.sql,
                     query.bindings
                 )
-                return SQLiteQueryResult(elements: result)
+                return try await handler(
+                    SQLiteDatabaseRowSequence(
+                        elements: result.map {
+                            .init(row: $0)
+                        })
+                )
             }
             catch {
                 attempt += 1
