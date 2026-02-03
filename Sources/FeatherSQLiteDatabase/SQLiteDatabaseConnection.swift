@@ -30,36 +30,21 @@ public struct SQLiteDatabaseConnection: DatabaseConnection {
         query: Query,
         _ handler: (RowSequence) async throws -> T = { _ in }
     ) async throws(DatabaseError) -> T {
-
-        let maxAttempts = 8
-        var attempt = 0
-        while true {
-            do {
-                let result = try await connection.query(
-                    query.sql,
-                    query.bindings
+        do {
+            let result = try await connection.query(
+                query.sql,
+                query.bindings
+            )
+            return try await handler(
+                SQLiteDatabaseRowSequence(
+                    elements: result.map {
+                        .init(row: $0)
+                    }
                 )
-                return try await handler(
-                    SQLiteDatabaseRowSequence(
-                        elements: result.map {
-                            .init(row: $0)
-                        }
-                    )
-                )
-            }
-            catch {
-                attempt += 1
-                if attempt >= maxAttempts {
-                    throw .query(error)
-                }
-                let delayMilliseconds = min(1000, 25 << (attempt - 1))
-                do {
-                    try await Task.sleep(for: .milliseconds(delayMilliseconds))
-                }
-                catch {
-                    throw .query(error)
-                }
-            }
+            )
+        }
+        catch {
+            throw .query(error)
         }
     }
 }
