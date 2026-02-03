@@ -41,28 +41,192 @@ struct SQLiteNIOExtrasTestSuite {
         try await closure(client)
     }
 
-    //    private func runUsingTestDatabaseClient(
-    //        _ closure: ((SQLiteDatabaseClient) async throws -> Void)
-    //    ) async throws {
-    //        var logger = Logger(label: "test")
-    //        logger.logLevel = .info
-    //
-    //        let configuration = SQLiteClient.Configuration(
-    //            storage: .memory,
-    //            logger: logger
-    //        )
-    //
-    //        let client = SQLiteClient(configuration: configuration)
-    //
-    //        let database = SQLiteDatabaseClient(client: client)
-    //
-    //        try await client.run()
-    //        try await closure(database)
-    //        await client.shutdown()
-    //    }
+    @Test
+    func concurrentTransactionsUseMultipleConnections() async throws {
+        try await runUsingTestClient { client in
+
+            try await client.withConnection { connection in
+
+                try await connection.query(
+                    #"""
+                    CREATE TABLE "items" (
+                        "id" INTEGER NOT NULL PRIMARY KEY,
+                        "name" TEXT NOT NULL
+                    );
+                    """#
+                )
+            }
+
+            async let first = client.withTransaction { connection in
+                try await connection.query(
+                    #"""
+                    INSERT INTO "items"
+                        ("id", "name")
+                    VALUES
+                        (1, 'alpha');
+                    """#
+                )
+            }
+
+            async let second = client.withTransaction { connection in
+                try await connection.query(
+                    #"""
+                    INSERT INTO "items"
+                        ("id", "name")
+                    VALUES
+                        (2, 'beta');
+                    """#
+                )
+            }
+
+            do {
+                _ = try await (first, second)
+
+                let rows = try await client.withConnection { connection in
+                    try await connection.query(
+                        #"""
+                        SELECT COUNT(*) AS "count"
+                        FROM "items";
+                        """#
+                    )
+                }
+                #expect(rows.count == 1)
+                #expect(rows[0].column("count")?.integer == 2)
+
+                #expect(await client.connectionCount() == 2)
+            }
+            catch {
+                Issue.record(error)
+            }
+
+        }
+    }
 
     @Test
-    func example() async throws {
+    func concurrentTransactionUpdates() async throws {
+        try await runUsingTestClient { client in
+            let suffix = randomTableSuffix()
+            let table = "sessions_\(suffix)"
+            let sessionID = "session_\(suffix)"
 
+            enum TestError: Error {
+                case missingRow
+            }
+
+            try await client.withConnection { connection in
+
+                _ = try await connection.query(
+                    #"""
+                    DROP TABLE IF EXISTS "\#(table)";
+                    """#
+                )
+                _ = try await connection.query(
+                    #"""
+                    CREATE TABLE "\#(table)" (
+                        "id" TEXT NOT NULL PRIMARY KEY,
+                        "access_token" TEXT NOT NULL,
+                        "access_expires_at" INTEGER NOT NULL,
+                        "refresh_token" TEXT NOT NULL,
+                        "refresh_count" INTEGER NOT NULL DEFAULT 0
+                    );
+                    """#
+                )
+
+                _ = try await connection.query(
+                    #"""
+                    INSERT INTO "\#(table)"
+                        ("id", "access_token", "access_expires_at", "refresh_token", "refresh_count")
+                    VALUES
+                        (
+                            '\#(sessionID)',
+                            'stale',
+                            (strftime('%s','now') - 300),
+                            'refresh',
+                            0
+                        );
+                    """#
+                )
+            }
+
+            func getValidAccessToken(
+                sessionID: String
+            ) async throws -> String {
+                try await client.withTransaction { connection in
+
+                    let updatedRows = try await connection.query(
+                        #"""
+                        UPDATE "\#(table)"
+                        SET
+                            "refresh_count" = "refresh_count" + 1,
+                            "access_token" = 'token_' || ("refresh_count" + 1),
+                            "access_expires_at" = (strftime('%s','now') + 600)
+                        WHERE
+                            "id" = '\#(sessionID)'
+                            AND "access_expires_at"
+                                <= (strftime('%s','now') + 60)
+                        RETURNING "access_token";
+                        """#
+                    )
+
+                    if let updatedRow = updatedRows.first {
+                        return updatedRow.column("access_token")?.string ?? ""
+                    }
+
+                    let rows = try await connection.query(
+                        #"""
+                        SELECT
+                            "access_token",
+                            "refresh_count",
+                            "access_expires_at" > (strftime('%s','now') + 60) AS "is_valid"
+                        FROM "\#(table)"
+                        WHERE "id" = '\#(sessionID)';
+                        """#
+                    )
+
+                    guard let row = rows.first else {
+                        throw TestError.missingRow
+                    }
+
+                    let isValid = row.column("is_valid")?.bool ?? false
+
+                    #expect(isValid == true)
+
+                    return row.column("access_token")?.string ?? ""
+                }
+            }
+
+            let workerCount = 80
+            var tokens: [String] = []
+            try await withThrowingTaskGroup(of: String.self) { group in
+                for _ in 0..<workerCount {
+                    group.addTask {
+                        try await getValidAccessToken(sessionID: sessionID)
+                    }
+                }
+                for try await token in group {
+                    tokens.append(token)
+                }
+            }
+
+            #expect(Set(tokens).count == 1)
+
+            let result = try await client.withConnection { connection in
+                try await connection.query(
+                    #"""
+                    SELECT
+                        "access_token",
+                        "refresh_count",
+                        "access_expires_at" > strftime('%s','now') AS "is_valid"
+                    FROM "\#(table)"
+                    WHERE "id" = '\#(sessionID)';
+                    """#
+                )
+            }
+
+            #expect(result.count == 1)
+            #expect(result[0].column("refresh_count")?.integer == 1)
+            #expect(result[0].column("access_token")?.string == "token_1")
+            #expect(result[0].column("is_valid")?.bool == true)
+        }
     }
 }
