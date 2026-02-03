@@ -13,7 +13,7 @@ import SQLiteNIO
 ///
 /// Use this client to execute queries and transactions concurrently.
 public final class SQLiteClient: Sendable {
-    
+
     /// Configuration values for a pooled SQLite client.
     public struct Configuration: Sendable {
 
@@ -115,8 +115,7 @@ public final class SQLiteClient: Sendable {
     /// Execute work using a leased connection.
     ///
     /// The connection is returned to the pool when the closure completes.
-    /// - Parameters:
-    ///   - closure: A closure that receives a SQLite connection.
+    /// - Parameter closure: A closure that receives a SQLite connection.
     /// - Throws: A `DatabaseError` if leasing or execution fails.
     /// - Returns: The result produced by the closure.
     @discardableResult
@@ -143,23 +142,20 @@ public final class SQLiteClient: Sendable {
     ///
     /// The transaction is committed on success and rolled back on failure.
     /// Busy errors are retried with an exponential backoff (up to 8 attempts).
-    /// - Parameters:
-    ///   - closure: A closure that receives a SQLite connection.
+    /// - Parameters closure: A closure that receives a SQLite connection.
     /// - Throws: A `DatabaseError` if transaction handling fails.
     /// - Returns: The result produced by the closure.
     @discardableResult
     public func withTransaction<T>(
         _ closure: (SQLiteConnection) async throws -> T
-    ) async throws(DatabaseError) -> T {
+    ) async throws -> T {
         let connection = try await leaseConnection()
         do {
             _ = try await connection.query("BEGIN;")
         }
         catch {
             await pool.releaseConnection(connection)
-            throw DatabaseError.transaction(
-                SQLiteDatabaseTransactionError(beginError: error)
-            )
+            throw SQLiteTransactionError(beginError: error)
         }
 
         var closureHasFinished = false
@@ -173,16 +169,14 @@ public final class SQLiteClient: Sendable {
             }
             catch {
                 await pool.releaseConnection(connection)
-                throw DatabaseError.transaction(
-                    SQLiteDatabaseTransactionError(commitError: error)
-                )
+                throw SQLiteTransactionError(commitError: error)
             }
 
             await pool.releaseConnection(connection)
             return result
         }
         catch {
-            var txError = SQLiteDatabaseTransactionError()
+            var txError = SQLiteTransactionError()
 
             if !closureHasFinished {
                 txError.closureError = error
@@ -199,7 +193,7 @@ public final class SQLiteClient: Sendable {
             }
 
             await pool.releaseConnection(connection)
-            throw DatabaseError.transaction(txError)
+            throw txError
         }
     }
 
@@ -209,9 +203,9 @@ public final class SQLiteClient: Sendable {
         await pool.connectionCount()
     }
 
-    private func leaseConnection(
-        
-    ) async throws(DatabaseError) -> SQLiteConnection {
+    private func leaseConnection() async throws(DatabaseError)
+        -> SQLiteConnection
+    {
         do {
             return try await pool.leaseConnection()
         }

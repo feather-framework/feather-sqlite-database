@@ -43,11 +43,20 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "FeatherSQLiteDatabase",
+            name: "SQLiteNIOExtras",
             dependencies: [
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "SQLiteNIO", package: "sqlite-nio"),
+            ],
+            swiftSettings: defaultSwiftSettings
+        ),
+        .target(
+            name: "FeatherSQLiteDatabase",
+            dependencies: [
+//                .product(name: "Logging", package: "swift-log"),
+//                .product(name: "SQLiteNIO", package: "sqlite-nio"),
                 .product(name: "FeatherDatabase", package: "feather-database"),
+                .target(name: "SQLiteNIOExtras"),
             ],
             swiftSettings: defaultSwiftSettings
         ),

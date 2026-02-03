@@ -1,9 +1,9 @@
-////
-////  SQLiteDatabaseTestSuite.swift
-////  feather-sqlite-database
-////
-////  Created by Tibor Bödecs on 2026. 01. 10..
-////
+//
+//  SQLiteDatabaseTestSuite.swift
+//  feather-sqlite-database
+//
+//  Created by Tibor Bödecs on 2026. 01. 10..
+//
 //
 //import FeatherDatabase
 //import Logging
@@ -101,7 +101,7 @@
 //
 //            try await database.execute(
 //                query: #"""
-//                    INSERT INTO "galaxies" 
+//                    INSERT INTO "galaxies"
 //                        ("id", "name")
 //                    VALUES
 //                        (\#(nil), \#(name1)),
@@ -143,7 +143,7 @@
 //
 //            try await database.execute(
 //                query: #"""
-//                    INSERT INTO "foo" 
+//                    INSERT INTO "foo"
 //                        ("id", "value")
 //                    VALUES
 //                        (1, 'abc'),
@@ -208,7 +208,7 @@
 //
 //            try await database.execute(
 //                query: #"""
-//                    INSERT INTO \#(unescaped: tableName) 
+//                    INSERT INTO \#(unescaped: tableName)
 //                        (\#(unescaped: idColumn), \#(unescaped: valueColumn))
 //                    VALUES
 //                        (\#(row1.0), \#(row1.1)),
@@ -741,9 +741,9 @@
 //
 //            let result = try await database.execute(
 //                query: #"""
-//                    SELECT 
-//                        sqlite_version() AS "version" 
-//                    WHERE 
+//                    SELECT
+//                        sqlite_version() AS "version"
+//                    WHERE
 //                        1=\#(1);
 //                    """#
 //            )

@@ -13,7 +13,7 @@ import SQLiteNIO
 /// Use this type to iterate or collect SQLite query results.
 public struct SQLiteDatabaseRowSequence: DatabaseRowSequence {
     public typealias Row = SQLiteDatabaseRow
-    
+
     let elements: [Row]
 
     /// An async iterator over SQLite rows.

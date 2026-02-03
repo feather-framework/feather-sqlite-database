@@ -134,10 +134,10 @@ actor SQLiteDatabaseConnectionPool {
                 "PRAGMA journal_mode = \(configuration.journalMode.rawValue);"
             )
             _ = try await connection.query(
-                    "PRAGMA busy_timeout = \(configuration.busyTimeoutMilliseconds);"
+                "PRAGMA busy_timeout = \(configuration.busyTimeoutMilliseconds);"
             )
             _ = try await connection.query(
-                    "PRAGMA foreign_keys = \(configuration.foreignKeysMode.rawValue);"
+                "PRAGMA foreign_keys = \(configuration.foreignKeysMode.rawValue);"
             )
         }
         catch {

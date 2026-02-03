@@ -6,11 +6,11 @@
 //
 
 import FeatherDatabase
-import SQLiteNIO
 import Logging
+import SQLiteNIO
 
 public struct SQLiteDatabaseConnection: DatabaseConnection {
-    
+
     public typealias Query = SQLiteDatabaseQuery
     public typealias RowSequence = SQLiteDatabaseRowSequence
 
@@ -20,7 +20,9 @@ public struct SQLiteDatabaseConnection: DatabaseConnection {
     /// Execute a SQLite query on this connection.
     ///
     /// This wraps `SQLiteNIO` query execution and maps errors.
-    /// - Parameter query: The SQLite query to execute.
+    /// - Parameters:
+    ///  - query: The SQLite query to execute.
+    ///  - handler: The handler to process the result sequence.
     /// - Throws: A `DatabaseError` if the query fails.
     /// - Returns: A query result containing the returned rows.
     @discardableResult
@@ -41,7 +43,8 @@ public struct SQLiteDatabaseConnection: DatabaseConnection {
                     SQLiteDatabaseRowSequence(
                         elements: result.map {
                             .init(row: $0)
-                        })
+                        }
+                    )
                 )
             }
             catch {

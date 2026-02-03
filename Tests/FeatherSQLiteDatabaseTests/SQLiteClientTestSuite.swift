@@ -8,6 +8,7 @@
 import FeatherDatabase
 import Logging
 import SQLiteNIO
+import SQLiteNIOExtras
 import Testing
 
 @testable import FeatherSQLiteDatabase
