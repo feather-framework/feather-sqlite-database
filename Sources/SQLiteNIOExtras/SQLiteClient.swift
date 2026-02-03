@@ -5,7 +5,6 @@
 //  Created by Tibor Bödecs on 2026. 01. 26..
 //
 
-import FeatherDatabase
 import Logging
 import SQLiteNIO
 
@@ -121,20 +120,16 @@ public final class SQLiteClient: Sendable {
     @discardableResult
     public func withConnection<T>(
         _ closure: (SQLiteConnection) async throws -> T
-    ) async throws(DatabaseError) -> T {
+    ) async throws -> T {
         let connection = try await leaseConnection()
         do {
             let result = try await closure(connection)
             await pool.releaseConnection(connection)
             return result
         }
-        catch let error as DatabaseError {
-            await pool.releaseConnection(connection)
-            throw error
-        }
         catch {
             await pool.releaseConnection(connection)
-            throw .connection(error)
+            throw error
         }
     }
 
@@ -203,14 +198,7 @@ public final class SQLiteClient: Sendable {
         await pool.connectionCount()
     }
 
-    private func leaseConnection() async throws(DatabaseError)
-        -> SQLiteConnection
-    {
-        do {
-            return try await pool.leaseConnection()
-        }
-        catch {
-            throw .connection(error)
-        }
+    private func leaseConnection() async throws -> SQLiteConnection {
+        try await pool.leaseConnection()
     }
 }

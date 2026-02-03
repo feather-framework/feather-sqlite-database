@@ -61,6 +61,13 @@ let package = Package(
             swiftSettings: defaultSwiftSettings
         ),
         .testTarget(
+            name: "SQLiteNIOExtrasTests",
+            dependencies: [
+                .target(name: "SQLiteNIOExtras"),
+            ],
+            swiftSettings: defaultSwiftSettings
+        ),
+        .testTarget(
             name: "FeatherSQLiteDatabaseTests",
             dependencies: [
                 .target(name: "FeatherSQLiteDatabase"),

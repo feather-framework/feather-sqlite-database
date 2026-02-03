@@ -7,7 +7,6 @@
 
 import FeatherDatabase
 import Logging
-import SQLiteNIO
 import SQLiteNIOExtras
 
 /// A SQLite-backed database client.
@@ -45,13 +44,18 @@ public struct SQLiteDatabaseClient: DatabaseClient {
     public func withConnection<T>(
         _ closure: (Connection) async throws -> T
     ) async throws(DatabaseError) -> T {
-        try await client.withConnection { connection in
-            try await closure(
-                SQLiteDatabaseConnection(
-                    connection: connection,
-                    logger: logger
+        do {
+            return try await client.withConnection { connection in
+                try await closure(
+                    SQLiteDatabaseConnection(
+                        connection: connection,
+                        logger: logger
+                    )
                 )
-            )
+            }
+        }
+        catch {
+            throw .connection(error)
         }
     }
 
