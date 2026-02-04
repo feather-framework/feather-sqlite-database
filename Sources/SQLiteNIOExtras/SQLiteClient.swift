@@ -87,12 +87,12 @@ public final class SQLiteClient: Sendable {
         }
     }
 
-    private let pool: SQLiteDatabaseConnectionPool
+    private let pool: SQLiteConnectionPool
 
     /// Create a SQLite client with a connection pool.
     /// - Parameter configuration: The client configuration.
     public init(configuration: Configuration) {
-        self.pool = SQLiteDatabaseConnectionPool(
+        self.pool = SQLiteConnectionPool(
             configuration: configuration
         )
     }

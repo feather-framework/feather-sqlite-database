@@ -8,7 +8,7 @@
 import Logging
 import SQLiteNIO
 
-actor SQLiteDatabaseConnectionPool {
+actor SQLiteConnectionPool {
 
     private struct Waiter {
         let id: Int
