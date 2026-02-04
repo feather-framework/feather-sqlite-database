@@ -15,12 +15,20 @@ actor SQLiteDatabaseConnectionPool {
         let continuation: CheckedContinuation<SQLiteConnection, Error>
     }
 
+    private struct TransactionWaiter {
+        let id: Int
+        let continuation: CheckedContinuation<Void, Error>
+    }
+
     private let configuration: SQLiteClient.Configuration
     private var availableConnections: [SQLiteConnection] = []
     private var waiters: [Waiter] = []
     private var totalConnections = 0
     private var nextWaiterID = 0
     private var isShutdown = false
+    private var transactionInUse = false
+    private var transactionWaiters: [TransactionWaiter] = []
+    private var nextTransactionWaiterID = 0
 
     init(
         configuration: SQLiteClient.Configuration
@@ -108,10 +116,52 @@ actor SQLiteDatabaseConnectionPool {
             )
         }
         waiters.removeAll(keepingCapacity: false)
+
+        for waiter in transactionWaiters {
+            waiter.continuation.resume(
+                throwing: SQLiteConnectionPoolError.shutdown
+            )
+        }
+        transactionWaiters.removeAll(keepingCapacity: false)
+        transactionInUse = false
     }
 
     func connectionCount() -> Int {
         totalConnections
+    }
+
+    func leaseTransactionPermit() async throws {
+        guard !isShutdown else {
+            throw SQLiteConnectionPoolError.shutdown
+        }
+
+        if !transactionInUse {
+            transactionInUse = true
+            return
+        }
+
+        let waiterID = nextTransactionWaiterID
+        nextTransactionWaiterID += 1
+
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                transactionWaiters.append(
+                    TransactionWaiter(id: waiterID, continuation: continuation)
+                )
+            }
+        } onCancel: {
+            Task { await self.cancelTransactionWaiter(id: waiterID) }
+        }
+    }
+
+    func releaseTransactionPermit() {
+        if transactionWaiters.isEmpty {
+            transactionInUse = false
+            return
+        }
+
+        let waiter = transactionWaiters.removeFirst()
+        waiter.continuation.resume()
     }
 
     private func cancelWaiter(
@@ -121,6 +171,17 @@ actor SQLiteDatabaseConnectionPool {
             return
         }
         let waiter = waiters.remove(at: index)
+        waiter.continuation.resume(throwing: CancellationError())
+    }
+
+    private func cancelTransactionWaiter(
+        id: Int
+    ) {
+        guard let index = transactionWaiters.firstIndex(where: { $0.id == id })
+        else {
+            return
+        }
+        let waiter = transactionWaiters.remove(at: index)
         waiter.continuation.resume(throwing: CancellationError())
     }
 

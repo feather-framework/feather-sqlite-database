@@ -146,9 +146,17 @@ public final class SQLiteClient: Sendable {
     ) async throws -> T {
         let connection = try await leaseConnection()
         do {
+            try await pool.leaseTransactionPermit()
+        }
+        catch {
+            await pool.releaseConnection(connection)
+            throw error
+        }
+        do {
             _ = try await connection.query("BEGIN;")
         }
         catch {
+            await pool.releaseTransactionPermit()
             await pool.releaseConnection(connection)
             throw SQLiteTransactionError(beginError: error)
         }
@@ -159,14 +167,8 @@ public final class SQLiteClient: Sendable {
             let result = try await closure(connection)
             closureHasFinished = true
 
-            do {
-                _ = try await connection.query("COMMIT;")
-            }
-            catch {
-                await pool.releaseConnection(connection)
-                throw SQLiteTransactionError(commitError: error)
-            }
-
+            _ = try await connection.query("COMMIT;")
+            await pool.releaseTransactionPermit()
             await pool.releaseConnection(connection)
             return result
         }
@@ -187,6 +189,7 @@ public final class SQLiteClient: Sendable {
                 txError.commitError = error
             }
 
+            await pool.releaseTransactionPermit()
             await pool.releaseConnection(connection)
             throw txError
         }
