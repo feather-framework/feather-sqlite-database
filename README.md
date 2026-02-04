@@ -3,9 +3,9 @@
 SQLite driver implementation for the abstract [Feather Database](https://github.com/feather-framework/feather-database) Swift API package.
 
 [
-    ![Release: 1.0.0-beta.2](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E2-F05138)
+    ![Release: 1.0.0-beta.3](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E3-F05138)
 ](
-    https://github.com/feather-framework/feather-sqlite-database/releases/tag/1.0.0-beta.2
+    https://github.com/feather-framework/feather-sqlite-database/releases/tag/1.0.0-beta.3
 )
 
 ## Features
@@ -37,7 +37,7 @@ SQLite driver implementation for the abstract [Feather Database](https://github.
 Add the dependency to your `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/feather-framework/feather-sqlite-database", exact: "1.0.0-beta.2"),
+.package(url: "https://github.com/feather-framework/feather-sqlite-database", exact: "1.0.0-beta.3"),
 ```
 
 Then add `FeatherSQLiteDatabase` to your target dependencies:
@@ -49,16 +49,15 @@ Then add `FeatherSQLiteDatabase` to your target dependencies:
 
 ## Usage
  
+API documentation is available at the link below:
+
 [
     ![DocC API documentation](https://img.shields.io/badge/DocC-API_documentation-F05138)
 ](
     https://feather-framework.github.io/feather-sqlite-database/documentation/feathersqlitedatabase/
 )
 
-API documentation is available at the following link. 
-
-> [!TIP]
-> Avoid calling `database.execute` while in a transaction; use the transaction `connection` instead.
+Here is a brief example:  
 
 ```swift
 import Logging
@@ -75,18 +74,24 @@ let configuration = SQLiteClient.Configuration(
 )
 
 let client = SQLiteClient(configuration: configuration)
+
+let database = SQLiteDatabaseClient(
+    client: client,
+    logger: logger
+)
+
 try await client.run()
 
-let database = SQLiteDatabaseClient(client: client)
-
-let result = try await database.execute(
-    query: #"""
-        SELECT 
-            sqlite_version() AS "version" 
-        WHERE 
-            1=\#(1);
-        """#
-)
+try await database.withConnection { connection in
+    try await connection.run(
+        query: #"""
+            SELECT
+                sqlite_version() AS "version"
+            WHERE
+                1=\#(1);
+            """#
+    )
+}
 
 for try await item in result {
     let version = try item.decode(column: "version", as: String.self)
