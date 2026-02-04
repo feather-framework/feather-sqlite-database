@@ -4,10 +4,11 @@
 //
 //  Created by Tibor Bödecs on 2026. 01. 10..
 //
-
+//
 import FeatherDatabase
 import Logging
 import SQLiteNIO
+import SQLiteNIOExtras
 import Testing
 
 @testable import FeatherSQLiteDatabase
@@ -28,7 +29,10 @@ struct SQLiteDatabaseTestSuite {
 
         let client = SQLiteClient(configuration: configuration)
 
-        let database = SQLiteDatabaseClient(client: client)
+        let database = SQLiteDatabaseClient(
+            client: client,
+            logger: logger
+        )
 
         try await client.run()
         try await closure(database)
@@ -38,390 +42,393 @@ struct SQLiteDatabaseTestSuite {
     @Test
     func foreignKeySupport() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            let result =
-                try await database.execute(
+            try await database.withConnection { connection in
+                let result = try await connection.run(
                     query: "PRAGMA foreign_keys"
-                )
-                .collect()
+                ) { try await $0.collect() }
 
-            #expect(result.count == 1)
-            #expect(
-                try result[0].decode(column: "foreign_keys", as: Int.self) == 1
-            )
+                #expect(result.count == 1)
+                #expect(
+                    try result[0].decode(column: "foreign_keys", as: Int.self)
+                        == 1
+                )
+            }
         }
     }
 
     @Test
     func tableCreation() async throws {
         try await runUsingTestDatabaseClient { database in
+            try await database.withConnection { connection in
+                try await connection.run(
+                    query: #"""
+                        CREATE TABLE IF NOT EXISTS "galaxies" (
+                            "id" INTEGER PRIMARY KEY,
+                            "name" TEXT
+                        );
+                        """#
+                )
 
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE IF NOT EXISTS "galaxies" (
-                        "id" INTEGER PRIMARY KEY,
-                        "name" TEXT
-                    );
-                    """#
-            )
+                let results = try await connection.run(
+                    query: #"""
+                        SELECT name
+                        FROM sqlite_master
+                        WHERE type = 'table'
+                        ORDER BY name;
+                        """#
+                ) { try await $0.collect() }
 
-            let results = try await database.execute(
-                query: #"""
-                    SELECT name
-                    FROM sqlite_master
-                    WHERE type = 'table'
-                    ORDER BY name;
-                    """#
-            )
+                #expect(results.count == 1)
 
-            let resultArray = try await results.collect()
-            #expect(resultArray.count == 1)
-
-            let item = resultArray[0]
-            let name = try item.decode(column: "name", as: String.self)
-            #expect(name == "galaxies")
+                let item = results[0]
+                let name = try item.decode(column: "name", as: String.self)
+                #expect(name == "galaxies")
+            }
         }
     }
 
     @Test
     func tableInsert() async throws {
         try await runUsingTestDatabaseClient { database in
+            try await database.withConnection { connection in
+                try await connection.run(
+                    query: #"""
+                        CREATE TABLE IF NOT EXISTS "galaxies" (
+                            "id" INTEGER PRIMARY KEY,
+                            "name" TEXT
+                        );
+                        """#
+                )
 
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE IF NOT EXISTS "galaxies" (
-                        "id" INTEGER PRIMARY KEY,
-                        "name" TEXT
-                    );
-                    """#
-            )
+                let name1 = "Andromeda"
+                let name2 = "Milky Way"
 
-            let name1 = "Andromeda"
-            let name2 = "Milky Way"
+                try await connection.run(
+                    query: #"""
+                        INSERT INTO "galaxies"
+                            ("id", "name")
+                        VALUES
+                            (\#(nil), \#(name1)),
+                            (\#(nil), \#(name2));
+                        """#
+                )
 
-            try await database.execute(
-                query: #"""
-                    INSERT INTO "galaxies" 
-                        ("id", "name")
-                    VALUES
-                        (\#(nil), \#(name1)),
-                        (\#(nil), \#(name2));
-                    """#
-            )
+                let results = try await connection.run(
+                    query: #"""
+                        SELECT * FROM "galaxies" ORDER BY "name" ASC;
+                        """#
+                ) { try await $0.collect() }
 
-            let results = try await database.execute(
-                query: #"""
-                    SELECT * FROM "galaxies" ORDER BY "name" ASC;
-                    """#
-            )
+                #expect(results.count == 2)
 
-            let resultArray = try await results.collect()
-            #expect(resultArray.count == 2)
+                let item1 = results[0]
+                let name1result = try item1.decode(
+                    column: "name",
+                    as: String.self
+                )
+                #expect(name1result == name1)
 
-            let item1 = resultArray[0]
-            let name1result = try item1.decode(column: "name", as: String.self)
-            #expect(name1result == name1)
-
-            let item2 = resultArray[1]
-            let name2result = try item2.decode(column: "name", as: String.self)
-            #expect(name2result == name2)
+                let item2 = results[1]
+                let name2result = try item2.decode(
+                    column: "name",
+                    as: String.self
+                )
+                #expect(name2result == name2)
+            }
         }
     }
 
     @Test
     func rowDecoding() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "foo" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "value" TEXT
-                    );
-                    """#
-            )
-
-            try await database.execute(
-                query: #"""
-                    INSERT INTO "foo" 
-                        ("id", "value")
-                    VALUES
-                        (1, 'abc'),
-                        (2, NULL);
-                    """#
-            )
-
-            let result =
-                try await database.execute(
+            try await database.withConnection { connection in
+                try await connection.run(
                     query: #"""
-                        SELECT "id", "value"
-                        FROM "foo"
-                        ORDER BY "id";
+                        CREATE TABLE "foo" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "value" TEXT
+                        );
                         """#
                 )
-                .collect()
 
-            #expect(result.count == 2)
+                try await connection.run(
+                    query: #"""
+                        INSERT INTO "foo"
+                            ("id", "value")
+                        VALUES
+                            (1, 'abc'),
+                            (2, NULL);
+                        """#
+                )
 
-            let item1 = result[0]
-            let item2 = result[1]
+                let result =
+                    try await connection.run(
+                        query: #"""
+                            SELECT "id", "value"
+                            FROM "foo"
+                            ORDER BY "id";
+                            """#
+                    ) { try await $0.collect() }
 
-            #expect(try item1.decode(column: "id", as: Int.self) == 1)
-            #expect(try item2.decode(column: "id", as: Int.self) == 2)
+                #expect(result.count == 2)
 
-            #expect(try item1.decode(column: "id", as: Int?.self) == .some(1))
-            #expect((try? item1.decode(column: "value", as: Int?.self)) == nil)
+                let item1 = result[0]
+                let item2 = result[1]
 
-            #expect(try item1.decode(column: "value", as: String.self) == "abc")
-            #expect(
-                (try? item2.decode(column: "value", as: String.self)) == nil
-            )
+                #expect(try item1.decode(column: "id", as: Int.self) == 1)
+                #expect(try item2.decode(column: "id", as: Int.self) == 2)
 
-            #expect(
-                (try item1.decode(column: "value", as: String?.self))
-                    == .some("abc")
-            )
-            #expect(
-                (try item2.decode(column: "value", as: String?.self)) == .none
-            )
+                #expect(
+                    try item1.decode(column: "id", as: Int?.self) == .some(1)
+                )
+                #expect(
+                    (try? item1.decode(column: "value", as: Int?.self)) == nil
+                )
+
+                #expect(
+                    try item1.decode(column: "value", as: String.self) == "abc"
+                )
+                #expect(
+                    (try? item2.decode(column: "value", as: String.self)) == nil
+                )
+
+                #expect(
+                    (try item1.decode(column: "value", as: String?.self))
+                        == .some("abc")
+                )
+                #expect(
+                    (try item2.decode(column: "value", as: String?.self))
+                        == .none
+                )
+            }
         }
     }
 
     @Test
     func queryEncoding() async throws {
         try await runUsingTestDatabaseClient { database in
+            try await database.withConnection { connection in
+                let tableName = "foo"
+                let idColumn = "id"
+                let valueColumn = "value"
+                let row1: (Int, String?) = (1, "abc")
+                let row2: (Int, String?) = (2, nil)
 
-            let tableName = "foo"
-            let idColumn = "id"
-            let valueColumn = "value"
-            let row1: (Int, String?) = (1, "abc")
-            let row2: (Int, String?) = (2, nil)
-
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE \#(unescaped: tableName) (
-                        \#(unescaped: idColumn) INTEGER NOT NULL PRIMARY KEY,
-                        \#(unescaped: valueColumn) TEXT
-                    );
-                    """#
-            )
-
-            try await database.execute(
-                query: #"""
-                    INSERT INTO \#(unescaped: tableName) 
-                        (\#(unescaped: idColumn), \#(unescaped: valueColumn))
-                    VALUES
-                        (\#(row1.0), \#(row1.1)),
-                        (\#(row2.0), \#(row2.1));
-                    """#
-            )
-
-            let result =
-                try await database.execute(
+                try await connection.run(
                     query: #"""
-                        SELECT \#(unescaped: idColumn), \#(unescaped: valueColumn)
-                        FROM \#(unescaped: tableName)
-                        ORDER BY \#(unescaped: idColumn) ASC;
+                        CREATE TABLE \#(unescaped: tableName) (
+                            \#(unescaped: idColumn) INTEGER NOT NULL PRIMARY KEY,
+                            \#(unescaped: valueColumn) TEXT
+                        );
                         """#
                 )
-                .collect()
 
-            #expect(result.count == 2)
+                try await connection.run(
+                    query: #"""
+                        INSERT INTO \#(unescaped: tableName)
+                            (\#(unescaped: idColumn), \#(unescaped: valueColumn))
+                        VALUES
+                            (\#(row1.0), \#(row1.1)),
+                            (\#(row2.0), \#(row2.1));
+                        """#
+                )
 
-            let item1 = result[0]
-            let item2 = result[1]
+                let result =
+                    try await connection.run(
+                        query: #"""
+                            SELECT \#(unescaped: idColumn), \#(unescaped: valueColumn)
+                            FROM \#(unescaped: tableName)
+                            ORDER BY \#(unescaped: idColumn) ASC;
+                            """#
+                    ) { try await $0.collect() }
 
-            #expect(try item1.decode(column: "id", as: Int.self) == 1)
-            #expect(try item2.decode(column: "id", as: Int.self) == 2)
+                #expect(result.count == 2)
 
-            #expect(
-                try item1.decode(column: "value", as: String?.self) == "abc"
-            )
-            #expect(try item2.decode(column: "value", as: String?.self) == nil)
+                let item1 = result[0]
+                let item2 = result[1]
+
+                #expect(try item1.decode(column: "id", as: Int.self) == 1)
+                #expect(try item2.decode(column: "id", as: Int.self) == 2)
+
+                #expect(
+                    try item1.decode(column: "value", as: String?.self) == "abc"
+                )
+                #expect(
+                    try item2.decode(column: "value", as: String?.self) == nil
+                )
+            }
         }
     }
 
     @Test
     func unsafeSQLBindings() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "widgets" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "name" TEXT NOT NULL
-                    );
-                    """#
-            )
-
-            let insert = SQLiteQuery(
-                unsafeSQL: #"""
-                    INSERT INTO "widgets"
-                        ("id", "name")
-                    VALUES
-                        (?, ?);
-                    """#,
-                bindings: [.integer(1), .text("gizmo")]
-            )
-
-            try await database.execute(query: insert)
-
-            let result =
-                try await database.execute(
+            try await database.withConnection { connection in
+                try await connection.run(
                     query: #"""
-                        SELECT "name"
-                        FROM "widgets"
-                        WHERE "id" = 1;
+                        CREATE TABLE "widgets" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "name" TEXT NOT NULL
+                        );
                         """#
                 )
-                .collect()
 
-            #expect(result.count == 1)
-            #expect(
-                try result[0].decode(column: "name", as: String.self) == "gizmo"
-            )
+                let insert = SQLiteDatabaseQuery(
+                    unsafeSQL: #"""
+                        INSERT INTO "widgets"
+                            ("id", "name")
+                        VALUES
+                            (?, ?);
+                        """#,
+                    bindings: [.integer(1), .text("gizmo")]
+                )
+
+                try await connection.run(query: insert)
+
+                let result =
+                    try await connection.run(
+                        query: #"""
+                            SELECT "name"
+                            FROM "widgets"
+                            WHERE "id" = 1;
+                            """#
+                    ) { try await $0.collect() }
+
+                #expect(result.count == 1)
+                #expect(
+                    try result[0].decode(column: "name", as: String.self)
+                        == "gizmo"
+                )
+            }
         }
     }
 
     @Test
     func optionalStringInterpolationNil() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "notes" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "body" TEXT
-                    );
-                    """#
-            )
-
-            let body: String? = nil
-            let insert: SQLiteQuery = #"""
-                INSERT INTO "notes"
-                    ("id", "body")
-                VALUES
-                    (1, \#(body));
-                """#
-
-            try await database.execute(query: insert)
-
-            let result =
-                try await database.execute(
+            try await database.withConnection { connection in
+                try await connection.run(
                     query: #"""
-                        SELECT "body"
-                        FROM "notes"
-                        WHERE "id" = 1;
+                        CREATE TABLE "notes" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "body" TEXT
+                        );
                         """#
                 )
-                .collect()
 
-            #expect(result.count == 1)
-            #expect(
-                try result[0].decode(column: "body", as: String?.self) == nil
-            )
+                let body: String? = nil
+                let insert: SQLiteDatabaseQuery = #"""
+                    INSERT INTO "notes"
+                        ("id", "body")
+                    VALUES
+                        (1, \#(body));
+                    """#
+
+                try await connection.run(query: insert)
+
+                let result =
+                    try await connection.run(
+                        query: #"""
+                            SELECT "body"
+                            FROM "notes"
+                            WHERE "id" = 1;
+                            """#
+                    ) { try await $0.collect() }
+
+                #expect(result.count == 1)
+                #expect(
+                    try result[0].decode(column: "body", as: String?.self)
+                        == nil
+                )
+            }
         }
     }
 
     @Test
     func sqliteDataInterpolation() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "tags" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "label" TEXT NOT NULL
-                    );
-                    """#
-            )
-
-            let label: SQLiteData = .text("alpha")
-            let insert: SQLiteQuery = #"""
-                INSERT INTO "tags"
-                    ("id", "label")
-                VALUES
-                    (1, \#(label));
-                """#
-
-            try await database.execute(query: insert)
-
-            let result =
-                try await database.execute(
+            try await database.withConnection { connection in
+                try await connection.run(
                     query: #"""
-                        SELECT "label"
-                        FROM "tags"
-                        WHERE "id" = 1;
+                        CREATE TABLE "tags" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "label" TEXT NOT NULL
+                        );
                         """#
                 )
-                .collect()
 
-            #expect(result.count == 1)
-            #expect(
-                try result[0].decode(column: "label", as: String.self)
-                    == "alpha"
-            )
+                let label: SQLiteData = .text("alpha")
+                let insert: SQLiteDatabaseQuery = #"""
+                    INSERT INTO "tags"
+                        ("id", "label")
+                    VALUES
+                        (1, \#(label));
+                    """#
+
+                try await connection.run(query: insert)
+
+                let result =
+                    try await connection.run(
+                        query: #"""
+                            SELECT "label"
+                            FROM "tags"
+                            WHERE "id" = 1;
+                            """#
+                    ) { try await $0.collect() }
+
+                #expect(result.count == 1)
+                #expect(
+                    try result[0].decode(column: "label", as: String.self)
+                        == "alpha"
+                )
+            }
         }
     }
 
     @Test
     func resultSequenceIterator() async throws {
         try await runUsingTestDatabaseClient { database in
+            try await database.withConnection { connection in
+                try await connection.run(
+                    query: #"""
+                        CREATE TABLE "numbers" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "value" TEXT NOT NULL
+                        );
+                        """#
+                )
 
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "numbers" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "value" TEXT NOT NULL
-                    );
-                    """#
-            )
+                try await connection.run(
+                    query: #"""
+                        INSERT INTO "numbers"
+                            ("id", "value")
+                        VALUES
+                            (1, 'one'),
+                            (2, 'two');
+                        """#
+                )
 
-            try await database.execute(
-                query: #"""
-                    INSERT INTO "numbers"
-                        ("id", "value")
-                    VALUES
-                        (1, 'one'),
-                        (2, 'two');
-                    """#
-            )
+                let result = try await connection.run(
+                    query: #"""
+                        SELECT "id", "value"
+                        FROM "numbers"
+                        ORDER BY "id";
+                        """#
+                ) { try await $0.collect() }
 
-            let result = try await database.execute(
-                query: #"""
-                    SELECT "id", "value"
-                    FROM "numbers"
-                    ORDER BY "id";
-                    """#
-            )
+                #expect(result.count == 2)
+                let first = result[0]
+                let second = result[1]
 
-            var iterator = result.makeAsyncIterator()
-            let first = await iterator.next()
-            let second = await iterator.next()
-            let third = await iterator.next()
-
-            #expect(first != nil)
-            #expect(second != nil)
-            #expect(third == nil)
-
-            if let first {
                 #expect(try first.decode(column: "id", as: Int.self) == 1)
                 #expect(
                     try first.decode(column: "value", as: String.self) == "one"
                 )
-            }
-            else {
-                Issue.record("Expected first iterator element to exist.")
-            }
 
-            if let second {
                 #expect(try second.decode(column: "id", as: Int.self) == 2)
                 #expect(
                     try second.decode(column: "value", as: String.self) == "two"
                 )
-            }
-            else {
-                Issue.record("Expected second iterator element to exist.")
             }
         }
     }
@@ -429,40 +436,42 @@ struct SQLiteDatabaseTestSuite {
     @Test
     func collectFirstReturnsFirstRow() async throws {
         try await runUsingTestDatabaseClient { database in
+            try await database.withConnection { connection in
+                try await connection.run(
+                    query: #"""
+                        CREATE TABLE "widgets" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "name" TEXT NOT NULL
+                        );
+                        """#
+                )
 
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "widgets" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "name" TEXT NOT NULL
-                    );
-                    """#
-            )
+                try await connection.run(
+                    query: #"""
+                        INSERT INTO "widgets"
+                            ("id", "name")
+                        VALUES
+                            (1, 'alpha'),
+                            (2, 'beta');
+                        """#
+                )
 
-            try await database.execute(
-                query: #"""
-                    INSERT INTO "widgets"
-                        ("id", "name")
-                    VALUES
-                        (1, 'alpha'),
-                        (2, 'beta');
-                    """#
-            )
+                let result =
+                    try await connection.run(
+                        query: #"""
+                            SELECT "name"
+                            FROM "widgets"
+                            ORDER BY "id" ASC;
+                            """#
+                    ) { try await $0.collect() }
+                    .first
 
-            let result = try await database.execute(
-                query: #"""
-                    SELECT "name"
-                    FROM "widgets"
-                    ORDER BY "id" ASC;
-                    """#
-            )
-
-            let first = try await result.collectFirst()
-
-            #expect(first != nil)
-            #expect(
-                try first?.decode(column: "name", as: String.self) == "alpha"
-            )
+                #expect(result != nil)
+                #expect(
+                    try result?.decode(column: "name", as: String.self)
+                        == "alpha"
+                )
+            }
         }
     }
 
@@ -470,17 +479,19 @@ struct SQLiteDatabaseTestSuite {
     func transactionSuccess() async throws {
         try await runUsingTestDatabaseClient { database in
 
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "items" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "name" TEXT NOT NULL
-                    );
-                    """#
-            )
+            try await database.withConnection { connection in
+                try await connection.run(
+                    query: #"""
+                        CREATE TABLE "items" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "name" TEXT NOT NULL
+                        );
+                        """#
+                )
+            }
 
-            try await database.transaction { connection in
-                try await connection.execute(
+            try await database.withTransaction { connection in
+                try await connection.run(
                     query: #"""
                         INSERT INTO "items"
                             ("id", "name")
@@ -490,40 +501,42 @@ struct SQLiteDatabaseTestSuite {
                 )
             }
 
-            let result =
-                try await database.execute(
+            try await database.withConnection { connection in
+
+                let result = try await connection.run(
                     query: #"""
                         SELECT "name"
                         FROM "items"
                         WHERE "id" = 1;
                         """#
-                )
-                .collect()
+                ) { try await $0.collect() }
 
-            #expect(result.count == 1)
-            #expect(
-                try result[0].decode(column: "name", as: String.self)
-                    == "widget"
-            )
+                #expect(result.count == 1)
+                #expect(
+                    try result[0].decode(column: "name", as: String.self)
+                        == "widget"
+                )
+            }
         }
     }
 
     @Test
     func transactionFailurePropagates() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "dummy" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "name" TEXT NOT NULL
-                    );
-                    """#
-            )
+            try await database.withConnection { connection in
+                try await connection.run(
+                    query: #"""
+                        CREATE TABLE "dummy" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "name" TEXT NOT NULL
+                        );
+                        """#
+                )
+            }
 
             do {
-                _ = try await database.transaction { connection in
-                    try await connection.execute(
+                try await database.withTransaction { connection in
+                    try await connection.run(
                         query: #"""
                             INSERT INTO "dummy"
                                 ("id", "name")
@@ -532,7 +545,7 @@ struct SQLiteDatabaseTestSuite {
                             """#
                     )
 
-                    return try await connection.execute(
+                    try await connection.run(
                         query: #"""
                             INSERT INTO "dummy"
                                 ("id", "name")
@@ -562,105 +575,106 @@ struct SQLiteDatabaseTestSuite {
                 )
             }
 
-            let result =
-                try await database.execute(
-                    query: #"""
-                        SELECT "id"
-                        FROM "dummy";
-                        """#
-                )
-                .collect()
+            try await database.withConnection { connection in
+                let result =
+                    try await connection.run(
+                        query: #"""
+                            SELECT "id"
+                            FROM "dummy";
+                            """#
+                    ) { try await $0.collect() }
 
-            #expect(result.isEmpty)
+                #expect(result.isEmpty)
+            }
         }
     }
 
     @Test
     func doubleRoundTrip() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "measurements" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "value" REAL NOT NULL
-                    );
-                    """#
-            )
-
-            let expected = 1.5
-
-            try await database.execute(
-                query: #"""
-                    INSERT INTO "measurements"
-                        ("id", "value")
-                    VALUES
-                        (1, \#(expected));
-                    """#
-            )
-
-            let result =
-                try await database.execute(
+            try await database.withConnection { connection in
+                try await connection.run(
                     query: #"""
-                        SELECT "value"
-                        FROM "measurements"
-                        WHERE "id" = 1;
+                        CREATE TABLE "measurements" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "value" REAL NOT NULL
+                        );
                         """#
                 )
-                .collect()
 
-            #expect(result.count == 1)
-            #expect(
-                try result[0].decode(column: "value", as: Double.self)
-                    == expected
-            )
+                let expected = 1.5
+
+                try await connection.run(
+                    query: #"""
+                        INSERT INTO "measurements"
+                            ("id", "value")
+                        VALUES
+                            (1, \#(expected));
+                        """#
+                )
+
+                let result =
+                    try await connection.run(
+                        query: #"""
+                            SELECT "value"
+                            FROM "measurements"
+                            WHERE "id" = 1;
+                            """#
+                    ) { try await $0.collect() }
+
+                #expect(result.count == 1)
+                #expect(
+                    try result[0].decode(column: "value", as: Double.self)
+                        == expected
+                )
+            }
         }
     }
 
     @Test
     func missingColumnThrows() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "items" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "value" TEXT
-                    );
-                    """#
-            )
-
-            try await database.execute(
-                query: #"""
-                    INSERT INTO "items"
-                        ("id", "value")
-                    VALUES
-                        (1, 'abc');
-                    """#
-            )
-
-            let result =
-                try await database.execute(
+            try await database.withConnection { connection in
+                try await connection.run(
                     query: #"""
-                        SELECT "id"
-                        FROM "items";
+                        CREATE TABLE "items" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "value" TEXT
+                        );
                         """#
                 )
-                .collect()
 
-            #expect(result.count == 1)
-
-            do {
-                _ = try result[0].decode(column: "value", as: String.self)
-                Issue.record("Expected decoding a missing column to throw.")
-            }
-            catch DecodingError.dataCorrupted {
-
-            }
-            catch {
-                Issue.record(
-                    "Expected a dataCorrupted error for missing column."
+                try await connection.run(
+                    query: #"""
+                        INSERT INTO "items"
+                            ("id", "value")
+                        VALUES
+                            (1, 'abc');
+                        """#
                 )
+
+                let result =
+                    try await connection.run(
+                        query: #"""
+                            SELECT "id"
+                            FROM "items";
+                            """#
+                    ) { try await $0.collect() }
+
+                #expect(result.count == 1)
+
+                do {
+                    _ = try result[0].decode(column: "value", as: String.self)
+                    Issue.record("Expected decoding a missing column to throw.")
+                }
+                catch DecodingError.dataCorrupted {
+
+                }
+                catch {
+                    Issue.record(
+                        "Expected a dataCorrupted error for missing column."
+                    )
+                }
             }
         }
     }
@@ -668,47 +682,47 @@ struct SQLiteDatabaseTestSuite {
     @Test
     func typeMismatchThrows() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            try await database.execute(
-                query: #"""
-                    CREATE TABLE "items" (
-                        "id" INTEGER NOT NULL PRIMARY KEY,
-                        "value" TEXT
-                    );
-                    """#
-            )
-
-            try await database.execute(
-                query: #"""
-                    INSERT INTO "items"
-                        ("id", "value")
-                    VALUES
-                        (1, 'abc');
-                    """#
-            )
-
-            let result =
-                try await database.execute(
+            try await database.withConnection { connection in
+                try await connection.run(
                     query: #"""
-                        SELECT "value"
-                        FROM "items";
+                        CREATE TABLE "items" (
+                            "id" INTEGER NOT NULL PRIMARY KEY,
+                            "value" TEXT
+                        );
                         """#
                 )
-                .collect()
 
-            #expect(result.count == 1)
-
-            do {
-                _ = try result[0].decode(column: "value", as: Int.self)
-                Issue.record("Expected decoding a string as Int to throw.")
-            }
-            catch DecodingError.typeMismatch {
-
-            }
-            catch {
-                Issue.record(
-                    "Expected a typeMismatch error when decoding a string as Int."
+                try await connection.run(
+                    query: #"""
+                        INSERT INTO "items"
+                            ("id", "value")
+                        VALUES
+                            (1, 'abc');
+                        """#
                 )
+
+                let result =
+                    try await connection.run(
+                        query: #"""
+                            SELECT "value"
+                            FROM "items";
+                            """#
+                    ) { try await $0.collect() }
+
+                #expect(result.count == 1)
+
+                do {
+                    _ = try result[0].decode(column: "value", as: Int.self)
+                    Issue.record("Expected decoding a string as Int to throw.")
+                }
+                catch DecodingError.typeMismatch {
+
+                }
+                catch {
+                    Issue.record(
+                        "Expected a typeMismatch error when decoding a string as Int."
+                    )
+                }
             }
         }
     }
@@ -716,21 +730,22 @@ struct SQLiteDatabaseTestSuite {
     @Test
     func queryFailureErrorText() async throws {
         try await runUsingTestDatabaseClient { database in
-
-            do {
-                _ = try await database.execute(
-                    query: #"""
-                        SELECT *
-                        FROM "missing_table";
-                        """#
-                )
-                Issue.record("Expected query to fail for missing table.")
-            }
-            catch DatabaseError.query(let error) {
-                #expect("\(error)".contains("no such table"))
-            }
-            catch {
-                Issue.record("Expected database query error to be thrown.")
+            try await database.withConnection { connection in
+                do {
+                    _ = try await connection.run(
+                        query: #"""
+                            SELECT *
+                            FROM "missing_table";
+                            """#
+                    )
+                    Issue.record("Expected query to fail for missing table.")
+                }
+                catch DatabaseError.query(let error) {
+                    #expect("\(error)".contains("no such table"))
+                }
+                catch {
+                    Issue.record("Expected database query error to be thrown.")
+                }
             }
         }
     }
@@ -738,22 +753,25 @@ struct SQLiteDatabaseTestSuite {
     @Test
     func versionCheck() async throws {
         try await runUsingTestDatabaseClient { database in
+            try await database.withConnection { connection in
+                let result = try await connection.run(
+                    query: #"""
+                        SELECT
+                            sqlite_version() AS "version"
+                        WHERE
+                            1=\#(1);
+                        """#
+                ) { try await $0.collect() }
 
-            let result = try await database.execute(
-                query: #"""
-                    SELECT 
-                        sqlite_version() AS "version" 
-                    WHERE 
-                        1=\#(1);
-                    """#
-            )
+                #expect(result.count == 1)
 
-            let resultArray = try await result.collect()
-            #expect(resultArray.count == 1)
-
-            let item = resultArray[0]
-            let version = try item.decode(column: "version", as: String.self)
-            #expect(version.split(separator: ".").count == 3)
+                let item = result[0]
+                let version = try item.decode(
+                    column: "version",
+                    as: String.self
+                )
+                #expect(version.split(separator: ".").count == 3)
+            }
         }
     }
 }

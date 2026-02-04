@@ -2,15 +2,13 @@
 //  SQLiteTransactionError.swift
 //  feather-sqlite-database
 //
-//  Created by Tibor Bödecs on 2026. 01. 10..
+//  Created by Tibor Bödecs on 2026. 02. 03..
 //
-
-import FeatherDatabase
 
 /// Transaction error details for SQLite operations.
 ///
 /// Use this to capture errors from transaction phases.
-public struct SQLiteTransactionError: DatabaseTransactionError {
+public struct SQLiteTransactionError: Error {
 
     /// The source file where the error was created.
     ///
@@ -24,19 +22,19 @@ public struct SQLiteTransactionError: DatabaseTransactionError {
     /// The error thrown while beginning the transaction.
     ///
     /// Set when the `BEGIN` step fails.
-    public var beginError: Error?
+    public internal(set) var beginError: Error?
     /// The error thrown inside the transaction closure.
     ///
     /// Set when the closure fails before commit.
-    public var closureError: Error?
+    public internal(set) var closureError: Error?
     /// The error thrown while committing the transaction.
     ///
     /// Set when the `COMMIT` step fails.
-    public var commitError: Error?
+    public internal(set) var commitError: Error?
     /// The error thrown while rolling back the transaction.
     ///
     /// Set when the `ROLLBACK` step fails.
-    public var rollbackError: Error?
+    public internal(set) var rollbackError: Error?
 
     /// Create a SQLite transaction error payload.
     ///
@@ -48,7 +46,7 @@ public struct SQLiteTransactionError: DatabaseTransactionError {
     ///   - closureError: The error thrown inside the transaction closure.
     ///   - commitError: The error thrown while committing the transaction.
     ///   - rollbackError: The error thrown while rolling back the transaction.
-    public init(
+    init(
         file: String = #fileID,
         line: Int = #line,
         beginError: Error? = nil,
