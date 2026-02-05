@@ -45,7 +45,11 @@ Then add `FeatherSQLiteDatabase` to your target dependencies:
 
 API documentation is available at the link below:
 
-[![DocC API documentation](https://img.shields.io/badge/DocC-API_documentation-F05138)](https://feather-framework.github.io/feather-sqlite-database/)
+[
+    ![DocC API documentation](https://img.shields.io/badge/DocC-API_documentation-F05138)
+](
+    https://feather-framework.github.io/feather-sqlite-database/
+)
 
 Here is a brief example:  
 
@@ -72,7 +76,7 @@ let database = SQLiteDatabaseClient(
 
 try await client.run()
 
-try await database.withConnection { connection in
+let result = try await database.withConnection { connection in
     try await connection.run(
         query: #"""
             SELECT
