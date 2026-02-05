@@ -16,7 +16,7 @@ public struct SQLiteDatabaseService: Service {
 
     /// Creates a new SQLite client service.
     ///
-    /// - Parameter sqliteClient: The SQLite client to manage for the service lifecycle.
+    /// - Parameter client: The SQLite client to manage for the service lifecycle.
     public init(
         _ client: SQLiteClient
     ) {
