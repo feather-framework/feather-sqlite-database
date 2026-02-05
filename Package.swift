@@ -34,10 +34,19 @@ let package = Package(
     products: [
         .library(name: "FeatherSQLiteDatabase", targets: ["FeatherSQLiteDatabase"]),
     ],
+    traits: [
+        "ServiceLifecycleSupport",
+        .default(
+            enabledTraits: [
+                "ServiceLifecycleSupport",
+            ]
+        ),
+    ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log", from: "1.6.0"),
         .package(url: "https://github.com/vapor/sqlite-nio", from: "1.12.0"),
         .package(url: "https://github.com/feather-framework/feather-database", exact: "1.0.0-beta.3"),
+        .package(url: "https://github.com/swift-server/swift-service-lifecycle", from: "2.8.0"),
         // [docc-plugin-placeholder]
     ],
     targets: [
@@ -52,8 +61,13 @@ let package = Package(
         .target(
             name: "FeatherSQLiteDatabase",
             dependencies: [
-                .product(name: "FeatherDatabase", package: "feather-database"),
                 .target(name: "SQLiteNIOExtras"),
+                .product(name: "FeatherDatabase", package: "feather-database"),
+                .product(
+                    name: "ServiceLifecycle",
+                    package: "swift-service-lifecycle",
+                    condition: .when(traits: ["ServiceLifecycleSupport"])
+                ),
             ],
             swiftSettings: defaultSwiftSettings
         ),

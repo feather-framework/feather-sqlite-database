@@ -45,6 +45,30 @@ Then add `FeatherSQLiteDatabase` to your target dependencies:
 .product(name: "FeatherSQLiteDatabase", package: "feather-sqlite-database"),
 ```
 
+<<<<<<< HEAD
+### Package traits
+
+This package offers additional integrations you can enable using [package traits](https://docs.swift.org/swiftpm/documentation/packagemanagerdocs/addingdependencies#Packages-with-Traits).
+To enable an additional trait on the package, update the package dependency:
+
+```diff
+.package(
+    url: "https://github.com/feather-framework/feather-sqlite-database",
+    exact: "1.0.0-beta.3",
++   traits: [
++       .defaults, 
++       "ServiceLifecycleSupport",
++   ]
+)
+```
+
+Available traits:
+
+- `ServiceLifecycleSupport` (default): Adds support for `SQLiteClientService`, a `ServiceLifecycle.Service` implementation for managing SQLite clients.
+
+
+=======
+>>>>>>> main
 ## Usage
 
 API documentation is available at the link below:

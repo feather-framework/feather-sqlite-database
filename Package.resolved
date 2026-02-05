@@ -1,5 +1,5 @@
 {
-  "originHash" : "ec031c0e73c03866bdfcc8adfdfda67f96b863f8ba73e708298a520ec0daf502",
+  "originHash" : "89777d929ec26bbed6f64b140dce168ca0fbc69d9273ed1edcfaf674a6bb8eb4",
   "pins" : [
     {
       "identity" : "feather-database",
@@ -13,10 +13,19 @@
     {
       "identity" : "sqlite-nio",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/sqlite-nio.git",
+      "location" : "https://github.com/vapor/sqlite-nio",
       "state" : {
-        "revision" : "2ab61385b70da8ed74958ce62fa9ebf0359cb08b",
-        "version" : "1.12.2"
+        "revision" : "b1467926902fe813b9eb118a32e78e7a58d20f25",
+        "version" : "1.12.3"
+      }
+    },
+    {
+      "identity" : "swift-async-algorithms",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-async-algorithms.git",
+      "state" : {
+        "revision" : "6c050d5ef8e1aa6342528460db614e9770d7f804",
+        "version" : "1.1.1"
       }
     },
     {
@@ -42,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log",
       "state" : {
-        "revision" : "7ee16e465622412764b0ff0c1301801dc71b8f61",
-        "version" : "1.9.0"
+        "revision" : "2778fd4e5a12a8aaa30a3ee8285f4ce54c5f3181",
+        "version" : "1.9.1"
       }
     },
     {
@@ -51,8 +60,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
       "state" : {
-        "revision" : "233f61bc2cfbb22d0edeb2594da27a20d2ce514e",
-        "version" : "2.93.0"
+        "revision" : "5e72fc102906ebe75a3487595a653e6f43725552",
+        "version" : "2.94.0"
+      }
+    },
+    {
+      "identity" : "swift-service-lifecycle",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swift-server/swift-service-lifecycle",
+      "state" : {
+        "revision" : "1de37290c0ab3c5a96028e0f02911b672fd42348",
+        "version" : "2.9.1"
       }
     },
     {

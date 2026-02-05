@@ -208,7 +208,9 @@ actor SQLiteConnectionPool {
             catch {
                 configuration.logger.warning(
                     "Failed to close SQLite connection after setup error",
-                    metadata: ["error": "\(error)"]
+                    metadata: [
+                        "error": "\(error)"
+                    ]
                 )
             }
             throw error
@@ -225,7 +227,9 @@ actor SQLiteConnectionPool {
         catch {
             configuration.logger.warning(
                 "Failed to close SQLite connection",
-                metadata: ["error": "\(error)"]
+                metadata: [
+                    "error": "\(error)"
+                ]
             )
         }
     }
