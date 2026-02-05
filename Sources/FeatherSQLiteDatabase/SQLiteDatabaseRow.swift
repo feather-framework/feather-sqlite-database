@@ -1,14 +1,15 @@
 //
-//  SQLiteRow+DatabaseRow.swift
+//  SQLiteDatabaseRow.swift
 //  feather-sqlite-database
 //
-//  Created by Tibor Bödecs on 2026. 01. 10..
+//  Created by Tibor Bödecs on 2026. 01. 10.
 //
 
 import FeatherDatabase
 import SQLiteNIO
 
-extension SQLiteRow: @retroactive DatabaseRow {
+public struct SQLiteDatabaseRow: DatabaseRow {
+    var row: SQLiteRow
 
     struct SingleValueDecoder: Decoder, SingleValueDecodingContainer {
 
@@ -91,7 +92,7 @@ extension SQLiteRow: @retroactive DatabaseRow {
         column: String,
         as type: T.Type
     ) throws(DecodingError) -> T {
-        guard let data = self.column(column) else {
+        guard let data = row.column(column) else {
             throw .dataCorrupted(
                 .init(
                     codingPath: [],

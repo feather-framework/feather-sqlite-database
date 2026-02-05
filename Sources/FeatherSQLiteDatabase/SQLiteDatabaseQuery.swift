@@ -1,8 +1,8 @@
 //
-//  SQLiteQuery.swift
+//  SQLiteDatabaseQuery.swift
 //  feather-sqlite-database
 //
-//  Created by Tibor Bödecs on 2026. 01. 10..
+//  Created by Tibor Bödecs on 2026. 01. 10.
 //
 
 import FeatherDatabase
@@ -11,7 +11,7 @@ import SQLiteNIO
 /// A SQLite query with SQL text and bound parameters.
 ///
 /// Use this type to construct SQLite queries safely.
-public struct SQLiteQuery: DatabaseQuery {
+public struct SQLiteDatabaseQuery: DatabaseQuery {
     /// The SQL text to execute.
     ///
     /// This is the raw SQL string for the query.
@@ -36,7 +36,7 @@ public struct SQLiteQuery: DatabaseQuery {
     }
 }
 
-extension SQLiteQuery: ExpressibleByStringInterpolation {
+extension SQLiteDatabaseQuery: ExpressibleByStringInterpolation {
 
     /// A string interpolation builder for SQLite queries.
     ///

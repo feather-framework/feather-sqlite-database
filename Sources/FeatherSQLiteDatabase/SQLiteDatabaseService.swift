@@ -1,5 +1,5 @@
 //
-//  SQLiteClientService.swift
+//  SQLiteDatabaseService.swift
 //  feather-sqlite-database
 //
 //  Created by Tibor Bödecs on 2026. 01. 29..
@@ -9,18 +9,18 @@
 import ServiceLifecycle
 
 /// A `Service` wrapper around an `SQLiteClient`.
-public struct SQLiteClientService: Service {
+public struct SQLiteDatabaseService: Service {
 
     /// The underlying SQLite client instance.
-    public var sqliteClient: SQLiteClient
+    public var client: SQLiteClient
 
     /// Creates a new SQLite client service.
     ///
     /// - Parameter sqliteClient: The SQLite client to manage for the service lifecycle.
     public init(
-        _ sqliteClient: SQLiteClient
+        _ client: SQLiteClient
     ) {
-        self.sqliteClient = sqliteClient
+        self.client = sqliteClient
     }
 
     /// Runs the SQLite client service.
@@ -30,9 +30,9 @@ public struct SQLiteClientService: Service {
     ///
     /// - Throws: Rethrows any error produced while starting the SQLite client.
     public func run() async throws {
-        try await sqliteClient.run()
+        try await client.run()
         try? await gracefulShutdown()
-        await sqliteClient.shutdown()
+        await client.shutdown()
     }
 
 }

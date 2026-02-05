@@ -8,15 +8,16 @@
 import Logging
 import SQLiteNIO
 
-enum SQLiteConnectionPoolError: Error, Sendable {
-    case shutdown
-}
-
 actor SQLiteConnectionPool {
 
     private struct Waiter {
         let id: Int
         let continuation: CheckedContinuation<SQLiteConnection, Error>
+    }
+
+    private struct TransactionWaiter {
+        let id: Int
+        let continuation: CheckedContinuation<Void, Error>
     }
 
     private let configuration: SQLiteClient.Configuration
@@ -25,6 +26,9 @@ actor SQLiteConnectionPool {
     private var totalConnections = 0
     private var nextWaiterID = 0
     private var isShutdown = false
+    private var transactionInUse = false
+    private var transactionWaiters: [TransactionWaiter] = []
+    private var nextTransactionWaiterID = 0
 
     init(
         configuration: SQLiteClient.Configuration
@@ -112,10 +116,52 @@ actor SQLiteConnectionPool {
             )
         }
         waiters.removeAll(keepingCapacity: false)
+
+        for waiter in transactionWaiters {
+            waiter.continuation.resume(
+                throwing: SQLiteConnectionPoolError.shutdown
+            )
+        }
+        transactionWaiters.removeAll(keepingCapacity: false)
+        transactionInUse = false
     }
 
     func connectionCount() -> Int {
         totalConnections
+    }
+
+    func leaseTransactionPermit() async throws {
+        guard !isShutdown else {
+            throw SQLiteConnectionPoolError.shutdown
+        }
+
+        if !transactionInUse {
+            transactionInUse = true
+            return
+        }
+
+        let waiterID = nextTransactionWaiterID
+        nextTransactionWaiterID += 1
+
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                transactionWaiters.append(
+                    TransactionWaiter(id: waiterID, continuation: continuation)
+                )
+            }
+        } onCancel: {
+            Task { await self.cancelTransactionWaiter(id: waiterID) }
+        }
+    }
+
+    func releaseTransactionPermit() {
+        if transactionWaiters.isEmpty {
+            transactionInUse = false
+            return
+        }
+
+        let waiter = transactionWaiters.removeFirst()
+        waiter.continuation.resume()
     }
 
     private func cancelWaiter(
@@ -128,23 +174,31 @@ actor SQLiteConnectionPool {
         waiter.continuation.resume(throwing: CancellationError())
     }
 
+    private func cancelTransactionWaiter(
+        id: Int
+    ) {
+        guard let index = transactionWaiters.firstIndex(where: { $0.id == id })
+        else {
+            return
+        }
+        let waiter = transactionWaiters.remove(at: index)
+        waiter.continuation.resume(throwing: CancellationError())
+    }
+
     private func makeConnection() async throws -> SQLiteConnection {
         let connection = try await SQLiteConnection.open(
             storage: configuration.storage,
             logger: configuration.logger
         )
         do {
-            _ = try await connection.execute(
-                query:
-                    "PRAGMA journal_mode = \(unescaped: configuration.journalMode.rawValue);"
+            _ = try await connection.query(
+                "PRAGMA journal_mode = \(configuration.journalMode.rawValue);"
             )
-            _ = try await connection.execute(
-                query:
-                    "PRAGMA busy_timeout = \(unescaped: String(configuration.busyTimeoutMilliseconds));"
+            _ = try await connection.query(
+                "PRAGMA busy_timeout = \(configuration.busyTimeoutMilliseconds);"
             )
-            _ = try await connection.execute(
-                query:
-                    "PRAGMA foreign_keys = \(unescaped: configuration.foreignKeysMode.rawValue);"
+            _ = try await connection.query(
+                "PRAGMA foreign_keys = \(configuration.foreignKeysMode.rawValue);"
             )
         }
         catch {

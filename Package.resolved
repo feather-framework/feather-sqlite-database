@@ -1,31 +1,22 @@
 {
-  "originHash" : "9e5cc89ae333fceaad6d740b6118c69e46dfe3412fd91c6be5f1a01bc8e84585",
+  "originHash" : "9b7a1b4d3d7682d16d34353960396d98809c7d26e380a87f292f8227a1222532",
   "pins" : [
     {
       "identity" : "feather-database",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/feather-framework/feather-database",
       "state" : {
-        "revision" : "147c96803f398c50f5717ce08ebd78a9e3ab7ca7",
-        "version" : "1.0.0-beta.2"
+        "revision" : "4ef69e67018c4bdf843858e8976c13b97c3afe4c",
+        "version" : "1.0.0-beta.3"
       }
     },
     {
       "identity" : "sqlite-nio",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/sqlite-nio.git",
+      "location" : "https://github.com/vapor/sqlite-nio",
       "state" : {
-        "revision" : "2ab61385b70da8ed74958ce62fa9ebf0359cb08b",
-        "version" : "1.12.2"
-      }
-    },
-    {
-      "identity" : "swift-async-algorithms",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-async-algorithms.git",
-      "state" : {
-        "revision" : "6c050d5ef8e1aa6342528460db614e9770d7f804",
-        "version" : "1.1.1"
+        "revision" : "b1467926902fe813b9eb118a32e78e7a58d20f25",
+        "version" : "1.12.3"
       }
     },
     {
@@ -51,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log",
       "state" : {
-        "revision" : "7ee16e465622412764b0ff0c1301801dc71b8f61",
-        "version" : "1.9.0"
+        "revision" : "2778fd4e5a12a8aaa30a3ee8285f4ce54c5f3181",
+        "version" : "1.9.1"
       }
     },
     {
@@ -60,17 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
       "state" : {
-        "revision" : "233f61bc2cfbb22d0edeb2594da27a20d2ce514e",
-        "version" : "2.93.0"
-      }
-    },
-    {
-      "identity" : "swift-service-lifecycle",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swift-server/swift-service-lifecycle.git",
-      "state" : {
-        "revision" : "1de37290c0ab3c5a96028e0f02911b672fd42348",
-        "version" : "2.9.1"
+        "revision" : "5e72fc102906ebe75a3487595a653e6f43725552",
+        "version" : "2.94.0"
       }
     },
     {
