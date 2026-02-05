@@ -6,6 +6,8 @@
 //
 
 #if ServiceLifecycleSupport
+
+import SQLiteNIOExtras
 import ServiceLifecycle
 
 /// A `Service` wrapper around an `SQLiteClient`.
@@ -20,7 +22,7 @@ public struct SQLiteDatabaseService: Service {
     public init(
         _ client: SQLiteClient
     ) {
-        self.client = sqliteClient
+        self.client = client
     }
 
     /// Runs the SQLite client service.

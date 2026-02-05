@@ -1,5 +1,5 @@
 //
-//  SQLiteDatabaseTestSuite.swift
+//  FeatherSQLiteDatabaseTestSuite.swift
 //  feather-sqlite-database
 //
 //  Created by Tibor Bödecs on 2026. 01. 10..
@@ -14,7 +14,7 @@ import Testing
 @testable import FeatherSQLiteDatabase
 
 @Suite
-struct SQLiteDatabaseTestSuite {
+struct FeatherSQLiteDatabaseTestSuite {
 
     private func runUsingTestDatabaseClient(
         _ closure: ((SQLiteDatabaseClient) async throws -> Void)
@@ -775,3 +775,62 @@ struct SQLiteDatabaseTestSuite {
         }
     }
 }
+
+#if ServiceLifecycleSupport
+import ServiceLifecycle
+
+extension FeatherSQLiteDatabaseTestSuite {
+
+    @Test
+    func serviceLifecycleSupport() async throws {
+        var logger = Logger(label: "test")
+        logger.logLevel = .info
+
+        let configuration = SQLiteClient.Configuration(
+            storage: .memory,
+            logger: logger,
+        )
+        let client = SQLiteClient(configuration: configuration)
+        let database = SQLiteDatabaseClient(client: client, logger: logger)
+        let service = SQLiteDatabaseService(client)
+
+        let serviceGroup = ServiceGroup(
+            services: [service],
+            logger: logger
+        )
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await serviceGroup.run()
+            }
+            group.addTask {
+                let result = try await database.withConnection { connection in
+                    try await connection.run(
+                        query: #"""
+                            SELECT 
+                                sqlite_version() AS "version" 
+                            WHERE 
+                                1=\#(1);
+                            """#
+                    )
+                }
+
+                let resultArray = try await result.collect()
+                #expect(resultArray.count == 1)
+
+                let item = resultArray[0]
+                let version = try item.decode(
+                    column: "version",
+                    as: String.self
+                )
+                #expect(version.split(separator: ".").count == 3)
+            }
+            try await group.next()
+
+            try await Task.sleep(for: .milliseconds(100))
+
+            await serviceGroup.triggerGracefulShutdown()
+        }
+    }
+}
+#endif
