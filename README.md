@@ -2,7 +2,11 @@
 
 SQLite driver implementation for the abstract [Feather Database](https://github.com/feather-framework/feather-database) Swift API package.
 
-[![Release: 1.0.0-beta.3](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E3-F05138)](https://github.com/feather-framework/feather-sqlite-database/releases/tag/1.0.0-beta.3)
+[
+    ![Release: 1.0.0-beta.3](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E3-F05138)
+](
+    https://github.com/feather-framework/feather-sqlite-database/releases/tag/1.0.0-beta.3
+)
 
 ## Features
 
@@ -45,7 +49,11 @@ Then add `FeatherSQLiteDatabase` to your target dependencies:
 
 API documentation is available at the link below:
 
-[![DocC API documentation](https://img.shields.io/badge/DocC-API_documentation-F05138)](https://feather-framework.github.io/feather-sqlite-database/)
+[
+    ![DocC API documentation](https://img.shields.io/badge/DocC-API_documentation-F05138)
+](
+    https://feather-framework.github.io/feather-sqlite-database/
+)
 
 Here is a brief example:  
 
@@ -72,7 +80,7 @@ let database = SQLiteDatabaseClient(
 
 try await client.run()
 
-try await database.withConnection { connection in
+let result = try await database.withConnection { connection in
     try await connection.run(
         query: #"""
             SELECT
