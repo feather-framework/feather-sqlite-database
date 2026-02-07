@@ -46,8 +46,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log", from: "1.6.0"),
         .package(url: "https://github.com/vapor/sqlite-nio", from: "1.12.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle", from: "2.8.0"),
-//        .package(url: "https://github.com/feather-framework/feather-database", exact: "1.0.0-beta.3"),
-        .package(url: "https://github.com/feather-framework/feather-database", branch: "feature/query-type"),
+        .package(url: "https://github.com/feather-framework/feather-database", exact: "1.0.0-beta.4"),
         // [docc-plugin-placeholder]
     ],
     targets: [

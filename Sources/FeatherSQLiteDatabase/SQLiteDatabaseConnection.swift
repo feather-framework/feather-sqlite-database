@@ -9,7 +9,7 @@ import FeatherDatabase
 import Logging
 import SQLiteNIO
 
-extension Query {
+extension DatabaseQuery {
 
     fileprivate struct SQLiteQuery {
         var sql: String
@@ -60,7 +60,7 @@ public struct SQLiteDatabaseConnection: DatabaseConnection {
     /// - Returns: A query result containing the returned rows.
     @discardableResult
     public func run<T: Sendable>(
-        query: Query,
+        query: DatabaseQuery,
         _ handler: (RowSequence) async throws -> T = { $0 }
     ) async throws(DatabaseError) -> T {
         do {
