@@ -21,7 +21,6 @@ extension Query {
         var sqliteBindings: [SQLiteData] = []
 
         for binding in bindings {
-            /// postgres binding index starts with 1
             let idx = binding.index + 1
             sqliteSQL =
                 sqliteSQL
