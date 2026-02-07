@@ -273,17 +273,14 @@ struct FeatherSQLiteDatabaseTestSuite {
                         """#
                 )
 
-                let insert = SQLiteDatabaseQuery(
-                    unsafeSQL: #"""
+                try await connection.run(
+                    query: #"""
                         INSERT INTO "widgets"
                             ("id", "name")
                         VALUES
-                            (?, ?);
-                        """#,
-                    bindings: [.integer(1), .text("gizmo")]
+                            (\#(1), \#("gizmo"));
+                        """#
                 )
-
-                try await connection.run(query: insert)
 
                 let result =
                     try await connection.run(
@@ -317,14 +314,15 @@ struct FeatherSQLiteDatabaseTestSuite {
                 )
 
                 let body: String? = nil
-                let insert: SQLiteDatabaseQuery = #"""
-                    INSERT INTO "notes"
-                        ("id", "body")
-                    VALUES
-                        (1, \#(body));
-                    """#
 
-                try await connection.run(query: insert)
+                try await connection.run(
+                    query: #"""
+                        INSERT INTO "notes"
+                            ("id", "body")
+                        VALUES
+                            (1, \#(body));
+                        """#
+                )
 
                 let result =
                     try await connection.run(
@@ -357,15 +355,14 @@ struct FeatherSQLiteDatabaseTestSuite {
                         """#
                 )
 
-                let label: SQLiteData = .text("alpha")
-                let insert: SQLiteDatabaseQuery = #"""
-                    INSERT INTO "tags"
-                        ("id", "label")
-                    VALUES
-                        (1, \#(label));
-                    """#
-
-                try await connection.run(query: insert)
+                try await connection.run(
+                    query: #"""
+                        INSERT INTO "tags"
+                            ("id", "label")
+                        VALUES
+                            (1, \#("alpha"));
+                        """#
+                )
 
                 let result =
                     try await connection.run(

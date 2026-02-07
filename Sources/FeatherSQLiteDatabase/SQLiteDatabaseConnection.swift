@@ -9,9 +9,43 @@ import FeatherDatabase
 import Logging
 import SQLiteNIO
 
+extension Query {
+
+    fileprivate struct SQLiteQuery {
+        var sql: String
+        var bindings: [SQLiteData]
+    }
+
+    fileprivate func toSQLiteQuery() -> SQLiteQuery {
+        var sqliteSQL = sql
+        var sqliteBindings: [SQLiteData] = []
+
+        for binding in bindings {
+            /// postgres binding index starts with 1
+            let idx = binding.index + 1
+            sqliteSQL =
+                sqliteSQL
+                .replacing("{{\(idx)}}", with: "?")
+
+            switch binding.binding {
+            case .int(let value):
+                sqliteBindings.append(.integer(value))
+            case .double(let value):
+                sqliteBindings.append(.float(value))
+            case .string(let value):
+                sqliteBindings.append(.text(value))
+            }
+        }
+
+        return .init(
+            sql: sqliteSQL,
+            bindings: sqliteBindings
+        )
+    }
+}
+
 public struct SQLiteDatabaseConnection: DatabaseConnection {
 
-    public typealias Query = SQLiteDatabaseQuery
     public typealias RowSequence = SQLiteDatabaseRowSequence
 
     var connection: SQLiteConnection
@@ -31,9 +65,10 @@ public struct SQLiteDatabaseConnection: DatabaseConnection {
         _ handler: (RowSequence) async throws -> T = { $0 }
     ) async throws(DatabaseError) -> T {
         do {
+            let sqliteQuery = query.toSQLiteQuery()
             let result = try await connection.query(
-                query.sql,
-                query.bindings
+                sqliteQuery.sql,
+                sqliteQuery.bindings
             )
             return try await handler(
                 SQLiteDatabaseRowSequence(
