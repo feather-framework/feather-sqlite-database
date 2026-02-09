@@ -101,14 +101,16 @@ extension FeatherSQLiteDatabaseTestSuite {
                 let rows = try await sequence.collect()
                 #expect(rows.count == 2)
 
-                let firstName = try rows[0].decode(
-                    column: "name",
-                    as: String.self
-                )
-                let secondName = try rows[1].decode(
-                    column: "name",
-                    as: String.self
-                )
+                let firstName = try rows[0]
+                    .decode(
+                        column: "name",
+                        as: String.self
+                    )
+                let secondName = try rows[1]
+                    .decode(
+                        column: "name",
+                        as: String.self
+                    )
 
                 #expect(firstName == "Hello")
                 #expect(secondName == "World")
