@@ -16,7 +16,7 @@ import Testing
 @Suite
 struct FeatherSQLiteDatabaseTestSuite {
 
-    private func runUsingTestDatabaseClient(
+    func runUsingTestDatabaseClient(
         _ closure: ((SQLiteDatabaseClient) async throws -> Void)
     ) async throws {
         var logger = Logger(label: "test")
@@ -35,8 +35,14 @@ struct FeatherSQLiteDatabaseTestSuite {
         )
 
         try await client.run()
-        try await closure(database)
-        await client.shutdown()
+        do {
+            try await closure(database)
+            await client.shutdown()
+        }
+        catch {
+            await client.shutdown()
+            throw error
+        }
     }
 
     @Test

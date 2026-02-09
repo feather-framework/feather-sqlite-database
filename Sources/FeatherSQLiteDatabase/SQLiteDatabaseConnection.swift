@@ -27,6 +27,8 @@ extension DatabaseQuery {
                 .replacing("{{\(idx)}}", with: "?")
 
             switch binding.binding {
+            case .bool(let value):
+                sqliteBindings.append(.integer(value ? 1 : 0))
             case .int(let value):
                 sqliteBindings.append(.integer(value))
             case .double(let value):
