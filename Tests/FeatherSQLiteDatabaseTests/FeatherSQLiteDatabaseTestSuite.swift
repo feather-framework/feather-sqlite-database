@@ -13,6 +13,10 @@ import Testing
 @testable import FeatherSQLiteDatabase
 @testable import SQLiteNIOExtras
 
+#if ServiceLifecycleSupport
+import ServiceLifecycleTestKit
+#endif
+
 @Suite
 struct FeatherSQLiteDatabaseTestSuite {
 
@@ -1260,7 +1264,7 @@ extension FeatherSQLiteDatabaseTestSuite {
     }
 
     @Test
-    func invalidQueryThrowsAndClientShutsDownGracefully() async throws {
+    func cancellationErrorTrigger() async throws {
         var logger = Logger(label: "test")
         logger.logLevel = .info
 
@@ -1279,12 +1283,6 @@ extension FeatherSQLiteDatabaseTestSuite {
         }
 
         struct MigrationService: Service {
-            func run() async throws {
-                throw MigrationError.generic
-            }
-        }
-
-        struct QueryService: Service {
             let database: any DatabaseClient
 
             func run() async throws {
@@ -1301,6 +1299,8 @@ extension FeatherSQLiteDatabaseTestSuite {
                         as: String.self
                     )
                 #expect(version?.split(separator: ".").count == 3)
+
+                throw MigrationError.generic
             }
         }
 
@@ -1311,12 +1311,9 @@ extension FeatherSQLiteDatabaseTestSuite {
                         service: SQLiteDatabaseService(client)
                     ),
                     .init(
-                        service: QueryService(database: database)
-                    ),
-                    .init(
-                        service: MigrationService(),
+                        service: MigrationService(database: database),
                         successTerminationBehavior: .gracefullyShutdownGroup,
-                        failureTerminationBehavior: .gracefullyShutdownGroup
+                        failureTerminationBehavior: .cancelGroup
                     ),
                 ],
                 logger: logger
@@ -1333,7 +1330,33 @@ extension FeatherSQLiteDatabaseTestSuite {
         catch {
             Issue.record("Service group should throw a generic Migration error")
         }
+    }
 
+    @Test
+    func serviceGracefulShutdown() async throws {
+        var logger = Logger(label: "test")
+        logger.logLevel = .info
+
+        let configuration = SQLiteClient.Configuration(
+            storage: .memory,
+            logger: logger
+        )
+        let client = SQLiteClient(configuration: configuration)
+        let service = SQLiteDatabaseService(client)
+
+        try await testGracefulShutdown { trigger in
+            try await withThrowingTaskGroup { group in
+                let serviceGroup = ServiceGroup(
+                    services: [service],
+                    logger: logger
+                )
+                group.addTask { try await serviceGroup.run() }
+
+                trigger.triggerGracefulShutdown()
+
+                try await group.waitForAll()
+            }
+        }
     }
 }
 #endif

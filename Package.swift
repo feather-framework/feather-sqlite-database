@@ -82,6 +82,13 @@ let package = Package(
             name: "FeatherSQLiteDatabaseTests",
             dependencies: [
                 .target(name: "FeatherSQLiteDatabase"),
+                .product(
+                    name: "ServiceLifecycleTestKit",
+                    package: "swift-service-lifecycle",
+                    condition: .when(
+                        traits: ["ServiceLifecycleSupport"]
+                    )
+                ),
             ],
             swiftSettings: defaultSwiftSettings
         ),
