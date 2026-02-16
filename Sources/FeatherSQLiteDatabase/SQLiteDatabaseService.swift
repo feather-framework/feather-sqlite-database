@@ -32,9 +32,16 @@ public struct SQLiteDatabaseService: Service {
     ///
     /// - Throws: Rethrows any error produced while starting the SQLite client.
     public func run() async throws {
-        try await client.run()
-        try? await gracefulShutdown()
-        await client.shutdown()
+        do {
+            try await client.run()
+            try? await gracefulShutdown()
+            await client.shutdown()
+        }
+        catch {
+            await client.shutdown()
+            throw error
+        }
+
     }
 
 }

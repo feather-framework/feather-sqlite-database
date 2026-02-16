@@ -2,7 +2,11 @@
 
 SQLite driver implementation for the abstract [Feather Database](https://github.com/feather-framework/feather-database) Swift API package.
 
-[![Release: 1.0.0-beta.6](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E6-F05138)](https://github.com/feather-framework/feather-sqlite-database/releases/tag/1.0.0-beta.6)
+[
+    ![Release: 1.0.0-beta.7](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E7-F05138)
+](
+    https://github.com/feather-framework/feather-sqlite-database/releases/tag/1.0.0-beta.7
+)
 
 ## Features
 
@@ -66,7 +70,11 @@ Available traits:
 
 API documentation is available at the link below:
 
-[![DocC API documentation](https://img.shields.io/badge/DocC-API_documentation-F05138)](https://feather-framework.github.io/feather-sqlite-database/)
+[
+    ![DocC API documentation](https://img.shields.io/badge/DocC-API_documentation-F05138)
+](
+    https://feather-framework.github.io/feather-sqlite-database/
+)
 
 Here is a brief example:  
 
