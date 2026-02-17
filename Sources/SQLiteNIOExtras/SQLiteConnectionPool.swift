@@ -202,17 +202,7 @@ actor SQLiteConnectionPool {
             )
         }
         catch {
-            do {
-                try await connection.close()
-            }
-            catch {
-                configuration.logger.warning(
-                    "Failed to close SQLite connection after setup error",
-                    metadata: [
-                        "error": "\(error)"
-                    ]
-                )
-            }
+            await closeConnection(connection)
             throw error
         }
         return connection
@@ -221,10 +211,13 @@ actor SQLiteConnectionPool {
     private func closeConnection(
         _ connection: SQLiteConnection
     ) async {
-        do {
-            try await connection.close()
-        }
-        catch {
+        let result =
+            await Task.detached {
+                try await connection.close()
+            }
+            .result
+
+        if case .failure(let error) = result {
             configuration.logger.warning(
                 "Failed to close SQLite connection",
                 metadata: [

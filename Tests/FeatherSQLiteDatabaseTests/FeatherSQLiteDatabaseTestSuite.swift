@@ -8,10 +8,14 @@
 import FeatherDatabase
 import Logging
 import SQLiteNIO
-import SQLiteNIOExtras
 import Testing
 
 @testable import FeatherSQLiteDatabase
+@testable import SQLiteNIOExtras
+
+#if ServiceLifecycleSupport
+import ServiceLifecycleTestKit
+#endif
 
 @Suite
 struct FeatherSQLiteDatabaseTestSuite {
@@ -1178,6 +1182,180 @@ extension FeatherSQLiteDatabaseTestSuite {
             try await Task.sleep(for: .milliseconds(100))
 
             await serviceGroup.triggerGracefulShutdown()
+        }
+    }
+
+    @Test
+    func serviceLifecycleCancellationShutsDownClient() async throws {
+        var logger = Logger(label: "test")
+        logger.logLevel = .info
+
+        let configuration = SQLiteClient.Configuration(
+            storage: .memory,
+            logger: logger
+        )
+        let client = SQLiteClient(configuration: configuration)
+        let service = SQLiteDatabaseService(client)
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await service.run()
+            }
+
+            try await Task.sleep(for: .milliseconds(100))
+            group.cancelAll()
+
+            do {
+                while let _ = try await group.next() {}
+            }
+            catch {
+                // Cancellation is expected; the shutdown is asserted below.
+            }
+        }
+
+        do {
+            try await client.withConnection { _ in }
+            Issue.record("Expected shutdown to reject new connections.")
+        }
+        catch {
+            #expect(error is SQLiteConnectionPoolError)
+        }
+    }
+
+    @Test
+    func serviceLifecycleGracefulShutdownShutsDownClient() async throws {
+        var logger = Logger(label: "test")
+        logger.logLevel = .info
+
+        let configuration = SQLiteClient.Configuration(
+            storage: .memory,
+            logger: logger
+        )
+        let client = SQLiteClient(configuration: configuration)
+        let service = SQLiteDatabaseService(client)
+        let serviceGroup = ServiceGroup(
+            services: [service],
+            logger: logger
+        )
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await serviceGroup.run()
+            }
+
+            try await Task.sleep(for: .milliseconds(100))
+            await serviceGroup.triggerGracefulShutdown()
+
+            do {
+                while let _ = try await group.next() {}
+            }
+            catch {
+                Issue.record(error)
+            }
+        }
+
+        do {
+            try await client.withConnection { _ in }
+            Issue.record("Expected shutdown to reject new connections.")
+        }
+        catch {
+            #expect(error is SQLiteConnectionPoolError)
+        }
+    }
+
+    @Test
+    func cancellationErrorTrigger() async throws {
+        var logger = Logger(label: "test")
+        logger.logLevel = .info
+
+        let configuration = SQLiteClient.Configuration(
+            storage: .memory,
+            logger: logger
+        )
+        let client = SQLiteClient(configuration: configuration)
+        let database = SQLiteDatabaseClient(
+            client: client,
+            logger: logger
+        )
+
+        enum MigrationError: Error {
+            case generic
+        }
+
+        struct MigrationService: Service {
+            let database: any DatabaseClient
+
+            func run() async throws {
+                let result = try await database.withConnection { connection in
+                    try await connection.run(
+                        query: #"""
+                            SELECT sqlite_version() AS "version"
+                            """#
+                    ) { try await $0.collect().first }
+                }
+                let version = try result?
+                    .decode(
+                        column: "version",
+                        as: String.self
+                    )
+                #expect(version?.split(separator: ".").count == 3)
+
+                throw MigrationError.generic
+            }
+        }
+
+        let serviceGroup = ServiceGroup(
+            configuration: .init(
+                services: [
+                    .init(
+                        service: SQLiteDatabaseService(client)
+                    ),
+                    .init(
+                        service: MigrationService(database: database),
+                        successTerminationBehavior: .gracefullyShutdownGroup,
+                        failureTerminationBehavior: .cancelGroup
+                    ),
+                ],
+                logger: logger
+            )
+        )
+
+        do {
+            try await serviceGroup.run()
+            Issue.record("Service group should fail.")
+        }
+        catch let error as MigrationError {
+            #expect(error == .generic)
+        }
+        catch {
+            Issue.record("Service group should throw a generic Migration error")
+        }
+    }
+
+    @Test
+    func serviceGracefulShutdown() async throws {
+        var logger = Logger(label: "test")
+        logger.logLevel = .info
+
+        let configuration = SQLiteClient.Configuration(
+            storage: .memory,
+            logger: logger
+        )
+        let client = SQLiteClient(configuration: configuration)
+        let service = SQLiteDatabaseService(client)
+
+        try await testGracefulShutdown { trigger in
+            try await withThrowingTaskGroup { group in
+                let serviceGroup = ServiceGroup(
+                    services: [service],
+                    logger: logger
+                )
+                group.addTask { try await serviceGroup.run() }
+
+                trigger.triggerGracefulShutdown()
+
+                try await group.waitForAll()
+            }
         }
     }
 }
