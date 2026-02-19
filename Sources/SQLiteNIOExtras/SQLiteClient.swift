@@ -49,9 +49,9 @@ public final class SQLiteClient: Sendable {
         /// Logger used for pool operations.
         public let logger: Logger
         /// Journal mode applied to each pooled connection.
-        public let journalMode: JournalMode
+        public let journalMode: JournalMode?
         /// Busy timeout, in milliseconds, applied to each pooled connection.
-        public let busyTimeoutMilliseconds: Int
+        public let busyTimeoutMilliseconds: Int?
         /// Foreign key enforcement mode applied to each pooled connection.
         public let foreignKeysMode: ForeignKeysMode
 
@@ -69,14 +69,16 @@ public final class SQLiteClient: Sendable {
             logger: Logger,
             minimumConnections: Int = 1,
             maximumConnections: Int = 8,
-            journalMode: JournalMode = .wal,
+            journalMode: JournalMode? = nil,
             foreignKeysMode: ForeignKeysMode = .on,
-            busyTimeoutMilliseconds: Int = 1000
+            busyTimeoutMilliseconds: Int? = nil
         ) {
             precondition(minimumConnections >= 0)
             precondition(maximumConnections >= 1)
             precondition(minimumConnections <= maximumConnections)
-            precondition(busyTimeoutMilliseconds >= 0)
+            if let busyTimeoutMilliseconds {
+                precondition(busyTimeoutMilliseconds >= 0)
+            }
             self.storage = storage
             self.minimumConnections = minimumConnections
             self.maximumConnections = maximumConnections
