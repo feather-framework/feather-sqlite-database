@@ -6,6 +6,7 @@
 //
 
 import Logging
+import NIOCore
 import SQLiteNIO
 
 /// A SQLite client backed by a connection pool.
@@ -68,7 +69,7 @@ public final class SQLiteClient: Sendable {
             storage: SQLiteConnection.Storage,
             logger: Logger,
             minimumConnections: Int = 1,
-            maximumConnections: Int = 8,
+            maximumConnections: Int = System.coreCount,
             journalMode: JournalMode? = nil,
             foreignKeysMode: ForeignKeysMode = .on,
             busyTimeoutMilliseconds: Int? = nil
