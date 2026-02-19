@@ -1,6 +1,6 @@
 //
-//  SQLiteDatabaseConnection.swift
-//  feather-sqlite-database
+//  DatabaseConnectionSQLite.swift
+//  feather-database-sqlite
 //
 //  Created by Tibor Bödecs on 2026. 01. 10.
 //
@@ -45,9 +45,9 @@ extension DatabaseQuery {
     }
 }
 
-public struct SQLiteDatabaseConnection: DatabaseConnection {
+public struct DatabaseConnectionSQLite: DatabaseConnection {
 
-    public typealias RowSequence = SQLiteDatabaseRowSequence
+    public typealias RowSequence = DatabaseRowSequenceSQLite
 
     var connection: SQLiteConnection
     public var logger: Logger
@@ -72,7 +72,7 @@ public struct SQLiteDatabaseConnection: DatabaseConnection {
                 sqliteQuery.bindings
             )
             return try await handler(
-                SQLiteDatabaseRowSequence(
+                DatabaseRowSequenceSQLite(
                     elements: result.map {
                         .init(row: $0)
                     }

@@ -1,6 +1,6 @@
 //
-//  SQLiteDatabaseTransactionError.swift
-//  feather-sqlite-database
+//  DatabaseTransactionErrorSQLite.swift
+//  feather-database-sqlite
 //
 //  Created by Tibor Bödecs on 2026. 01. 10.
 //
@@ -11,7 +11,7 @@ import SQLiteNIOExtras
 /// Transaction error details for SQLite operations.
 ///
 /// Use this to capture errors from transaction phases.
-public struct SQLiteDatabaseTransactionError: DatabaseTransactionError {
+public struct DatabaseTransactionErrorSQLite: DatabaseTransactionError {
 
     var underlyingError: SQLiteTransactionError
 
