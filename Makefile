@@ -44,4 +44,4 @@ test:
 	swift test --parallel
 
 docker-test:
-	docker build -t feather-sqlite-database-tests . -f ./docker/tests/Dockerfile && docker run --rm feather-sqlite-database-tests
+	docker build -t feather-database-sqlite-tests . -f ./docker/tests/Dockerfile && docker run --rm feather-database-sqlite-tests

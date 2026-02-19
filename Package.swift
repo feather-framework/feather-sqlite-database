@@ -11,7 +11,7 @@ var defaultSwiftSettings: [SwiftSetting] =
     // https://forums.swift.org/t/experimental-support-for-lifetime-dependencies-in-swift-6-2-and-beyond/78638
     .enableExperimentalFeature("Lifetimes"),
     // https://github.com/swiftlang/swift/pull/65218
-    .enableExperimentalFeature("AvailabilityMacro=featherSQLiteDatabase 1.0:macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0"),
+    .enableExperimentalFeature("AvailabilityMacro=FeatherDatabaseSQLite 1.0:macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0"),
 ]
 
 #if compiler(>=6.2)
@@ -23,7 +23,7 @@ defaultSwiftSettings.append(
 
 
 let package = Package(
-    name: "feather-sqlite-database",
+    name: "feather-database-sqlite",
     platforms: [
         .macOS(.v15),
         .iOS(.v18),
@@ -32,7 +32,7 @@ let package = Package(
         .visionOS(.v2),
     ],
     products: [
-        .library(name: "FeatherSQLiteDatabase", targets: ["FeatherSQLiteDatabase"]),
+        .library(name: "FeatherDatabaseSQLite", targets: ["FeatherDatabaseSQLite"]),
     ],
     traits: [
         "ServiceLifecycleSupport",
@@ -59,7 +59,7 @@ let package = Package(
             swiftSettings: defaultSwiftSettings
         ),
         .target(
-            name: "FeatherSQLiteDatabase",
+            name: "FeatherDatabaseSQLite",
             dependencies: [
                 .target(name: "SQLiteNIOExtras"),
                 .product(name: "FeatherDatabase", package: "feather-database"),
@@ -79,9 +79,9 @@ let package = Package(
             swiftSettings: defaultSwiftSettings
         ),
         .testTarget(
-            name: "FeatherSQLiteDatabaseTests",
+            name: "FeatherDatabaseSQLiteTests",
             dependencies: [
-                .target(name: "FeatherSQLiteDatabase"),
+                .target(name: "FeatherDatabaseSQLite"),
                 .product(
                     name: "ServiceLifecycleTestKit",
                     package: "swift-service-lifecycle",

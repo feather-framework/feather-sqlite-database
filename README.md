@@ -1,11 +1,11 @@
-# Feather SQLite Database
+# Feather Database SQLite
 
 SQLite driver implementation for the abstract [Feather Database](https://github.com/feather-framework/feather-database) Swift API package.
 
 [
-    ![Release: 1.0.0-beta.7](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E7-F05138)
+    ![Release: 1.0.0-beta.8](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E8-F05138)
 ](
-    https://github.com/feather-framework/feather-sqlite-database/releases/tag/1.0.0-beta.7
+    https://github.com/feather-framework/feather-database-sqlite/releases/tag/1.0.0-beta.8
 )
 
 ## Features
@@ -36,13 +36,13 @@ SQLite driver implementation for the abstract [Feather Database](https://github.
 Add the dependency to your `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/feather-framework/feather-sqlite-database", exact: "1.0.0-beta.5"),
+.package(url: "https://github.com/feather-framework/feather-database-sqlite", exact: "1.0.0-beta.8"),
 ```
 
-Then add `FeatherSQLiteDatabase` to your target dependencies:
+Then add `FeatherDatabaseSQLite` to your target dependencies:
 
 ```swift
-.product(name: "FeatherSQLiteDatabase", package: "feather-sqlite-database"),
+.product(name: "FeatherDatabaseSQLite", package: "feather-database-sqlite"),
 ```
 
 ### Package traits
@@ -52,8 +52,8 @@ To enable an additional trait on the package, update the package dependency:
 
 ```diff
 .package(
-    url: "https://github.com/feather-framework/feather-sqlite-database",
-    exact: "1.0.0-beta.4",
+    url: "https://github.com/feather-framework/feather-database-sqlite",
+    exact: "1.0.0-beta.8",
 +   traits: [
 +       .defaults, 
 +       "ServiceLifecycleSupport",
@@ -63,7 +63,7 @@ To enable an additional trait on the package, update the package dependency:
 
 Available traits:
 
-- `ServiceLifecycleSupport` (default): Adds support for `SQLiteClientService`, a `ServiceLifecycle.Service` implementation for managing SQLite clients.
+- `ServiceLifecycleSupport` (default): Adds support for `DatabaseServiceSQLite`, a `ServiceLifecycle.Service` implementation for managing SQLite clients.
 
 
 ## Usage
@@ -73,7 +73,7 @@ API documentation is available at the link below:
 [
     ![DocC API documentation](https://img.shields.io/badge/DocC-API_documentation-F05138)
 ](
-    https://feather-framework.github.io/feather-sqlite-database/
+    https://feather-framework.github.io/feather-database-sqlite/
 )
 
 Here is a brief example:  
@@ -81,8 +81,9 @@ Here is a brief example:
 ```swift
 import Logging
 import SQLiteNIO
+import SQLiteNIOExtras
 import FeatherDatabase
-import FeatherSQLiteDatabase
+import FeatherDatabaseSQLite
 
 var logger = Logger(label: "example")
 logger.logLevel = .info
@@ -94,7 +95,7 @@ let configuration = SQLiteClient.Configuration(
 
 let client = SQLiteClient(configuration: configuration)
 
-let database = SQLiteDatabaseClient(
+let database = DatabaseClientSQLite(
     client: client,
     logger: logger
 )
@@ -127,8 +128,8 @@ await client.shutdown()
 
 The following database driver implementations are available for use:
 
-- [Postgres](https://github.com/feather-framework/feather-postgres-database)
-- [MySQL](https://github.com/feather-framework/feather-mysql-database)
+- [Postgres](https://github.com/feather-framework/feather-database-postgres)
+- [MySQL](https://github.com/feather-framework/feather-database-mysql)
 
 ## Development
 
@@ -141,4 +142,4 @@ The following database driver implementations are available for use:
 
 ## Contributing
 
-[Pull requests](https://github.com/feather-framework/feather-sqlite-database/pulls) are welcome. Please keep changes focused and include tests for new logic.
+[Pull requests](https://github.com/feather-framework/feather-database-sqlite/pulls) are welcome. Please keep changes focused and include tests for new logic.

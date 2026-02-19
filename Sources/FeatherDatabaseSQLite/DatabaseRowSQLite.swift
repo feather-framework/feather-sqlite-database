@@ -1,6 +1,6 @@
 //
-//  SQLiteDatabaseRow.swift
-//  feather-sqlite-database
+//  DatabaseRowSQLite.swift
+//  feather-database-sqlite
 //
 //  Created by Tibor Bödecs on 2026. 01. 10.
 //
@@ -8,7 +8,7 @@
 import FeatherDatabase
 import SQLiteNIO
 
-public struct SQLiteDatabaseRow: DatabaseRow {
+public struct DatabaseRowSQLite: DatabaseRow {
     var row: SQLiteRow
 
     struct SingleValueDecoder: Decoder, SingleValueDecodingContainer {

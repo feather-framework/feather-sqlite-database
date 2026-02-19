@@ -1,6 +1,6 @@
 //
-//  SQLiteDatabaseService.swift
-//  feather-sqlite-database
+//  DatabaseServiceSQLite.swift
+//  feather-database-sqlite
 //
 //  Created by Tibor Bödecs on 2026. 01. 29..
 //
@@ -11,7 +11,7 @@ import SQLiteNIOExtras
 import ServiceLifecycle
 
 /// A `Service` wrapper around an `SQLiteClient`.
-public struct SQLiteDatabaseService: Service {
+public struct DatabaseServiceSQLite: Service {
 
     /// The underlying SQLite client instance.
     public var client: SQLiteClient

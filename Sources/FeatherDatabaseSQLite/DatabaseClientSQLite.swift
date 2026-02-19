@@ -1,6 +1,6 @@
 //
-//  SQLiteDatabaseClient.swift
-//  feather-sqlite-database
+//  DatabaseClientSQLite.swift
+//  feather-database-sqlite
 //
 //  Created by Tibor Bödecs on 2026. 01. 10..
 //
@@ -12,9 +12,9 @@ import SQLiteNIOExtras
 /// A SQLite-backed database client.
 ///
 /// Use this client to execute queries and manage transactions on SQLite.
-public struct SQLiteDatabaseClient: DatabaseClient {
+public struct DatabaseClientSQLite: DatabaseClient {
 
-    public typealias Connection = SQLiteDatabaseConnection
+    public typealias Connection = DatabaseConnectionSQLite
 
     let client: SQLiteClient
     var logger: Logger
@@ -47,7 +47,7 @@ public struct SQLiteDatabaseClient: DatabaseClient {
         do {
             return try await client.withConnection { connection in
                 try await closure(
-                    SQLiteDatabaseConnection(
+                    DatabaseConnectionSQLite(
                         connection: connection,
                         logger: logger
                     )
@@ -72,7 +72,7 @@ public struct SQLiteDatabaseClient: DatabaseClient {
         do {
             return try await client.withTransaction { connection in
                 try await closure(
-                    SQLiteDatabaseConnection(
+                    DatabaseConnectionSQLite(
                         connection: connection,
                         logger: logger
                     )
@@ -81,7 +81,7 @@ public struct SQLiteDatabaseClient: DatabaseClient {
         }
         catch let error as SQLiteTransactionError {
             throw .transaction(
-                SQLiteDatabaseTransactionError(
+                DatabaseTransactionErrorSQLite(
                     underlyingError: error
                 )
             )

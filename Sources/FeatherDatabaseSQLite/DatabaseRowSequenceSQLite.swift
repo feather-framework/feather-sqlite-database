@@ -1,6 +1,6 @@
 //
-//  SQLiteDatabaseRowSequence.swift
-//  feather-sqlite-database
+//  DatabaseRowSequenceSQLite.swift
+//  feather-database-sqlite
 //
 //  Created by Tibor Bödecs on 2026. 01. 10.
 //
@@ -11,8 +11,8 @@ import SQLiteNIO
 /// A query result backed by SQLite rows.
 ///
 /// Use this type to iterate or collect SQLite query results.
-public struct SQLiteDatabaseRowSequence: DatabaseRowSequence {
-    public typealias Row = SQLiteDatabaseRow
+public struct DatabaseRowSequenceSQLite: DatabaseRowSequence {
+    public typealias Row = DatabaseRowSQLite
 
     let elements: [Row]
 
