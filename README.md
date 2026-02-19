@@ -1,4 +1,4 @@
-# Feather SQLite Database
+# Feather Database SQLite
 
 SQLite driver implementation for the abstract [Feather Database](https://github.com/feather-framework/feather-database) Swift API package.
 
