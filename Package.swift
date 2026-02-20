@@ -35,10 +35,10 @@ let package = Package(
         .library(name: "FeatherDatabaseSQLite", targets: ["FeatherDatabaseSQLite"]),
     ],
     traits: [
-        "ServiceLifecycleSupport",
+        "ServiceLifecycle",
         .default(
             enabledTraits: [
-                "ServiceLifecycleSupport",
+                "ServiceLifecycle",
             ]
         ),
     ],
@@ -66,7 +66,7 @@ let package = Package(
                 .product(
                     name: "ServiceLifecycle",
                     package: "swift-service-lifecycle",
-                    condition: .when(traits: ["ServiceLifecycleSupport"])
+                    condition: .when(traits: ["ServiceLifecycle"])
                 ),
             ],
             swiftSettings: defaultSwiftSettings
@@ -86,7 +86,7 @@ let package = Package(
                     name: "ServiceLifecycleTestKit",
                     package: "swift-service-lifecycle",
                     condition: .when(
-                        traits: ["ServiceLifecycleSupport"]
+                        traits: ["ServiceLifecycle"]
                     )
                 ),
             ],

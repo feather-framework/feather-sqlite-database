@@ -56,14 +56,14 @@ To enable an additional trait on the package, update the package dependency:
     exact: "1.0.0-beta.9",
 +   traits: [
 +       .defaults, 
-+       "ServiceLifecycleSupport",
++       "ServiceLifecycle",
 +   ]
 )
 ```
 
 Available traits:
 
-- `ServiceLifecycleSupport` (default): Adds support for `DatabaseServiceSQLite`, a `ServiceLifecycle.Service` implementation for managing SQLite clients.
+- `ServiceLifecycle` (default): Adds support for `DatabaseServiceSQLite`, a `ServiceLifecycle.Service` implementation for managing SQLite clients.
 
 
 ## Usage
