@@ -3,9 +3,9 @@
 SQLite driver implementation for the abstract [Feather Database](https://github.com/feather-framework/feather-database) Swift API package.
 
 [
-    ![Release: 1.0.0-beta.8](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E8-F05138)
+    ![Release: 1.0.0-beta.9](https://img.shields.io/badge/Release-1%2E0%2E0--beta%2E9-F05138)
 ](
-    https://github.com/feather-framework/feather-database-sqlite/releases/tag/1.0.0-beta.8
+    https://github.com/feather-framework/feather-database-sqlite/releases/tag/1.0.0-beta.9
 )
 
 ## Features
@@ -36,7 +36,7 @@ SQLite driver implementation for the abstract [Feather Database](https://github.
 Add the dependency to your `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/feather-framework/feather-database-sqlite", exact: "1.0.0-beta.8"),
+.package(url: "https://github.com/feather-framework/feather-database-sqlite", exact: "1.0.0-beta.9"),
 ```
 
 Then add `FeatherDatabaseSQLite` to your target dependencies:
@@ -53,7 +53,7 @@ To enable an additional trait on the package, update the package dependency:
 ```diff
 .package(
     url: "https://github.com/feather-framework/feather-database-sqlite",
-    exact: "1.0.0-beta.8",
+    exact: "1.0.0-beta.9",
 +   traits: [
 +       .defaults, 
 +       "ServiceLifecycleSupport",
