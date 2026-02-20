@@ -5,7 +5,7 @@
 //  Created by Tibor Bödecs on 2026. 01. 29..
 //
 
-#if ServiceLifecycleSupport
+#if ServiceLifecycle
 
 import SQLiteNIOExtras
 import ServiceLifecycle

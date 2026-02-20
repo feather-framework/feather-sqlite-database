@@ -13,7 +13,7 @@ import Testing
 @testable import FeatherDatabaseSQLite
 @testable import SQLiteNIOExtras
 
-#if ServiceLifecycleSupport
+#if ServiceLifecycle
 import ServiceLifecycleTestKit
 #endif
 
@@ -1267,13 +1267,13 @@ struct FeatherDatabaseSQLiteTestSuite {
 
 }
 
-#if ServiceLifecycleSupport
+#if ServiceLifecycle
 import ServiceLifecycle
 
 extension FeatherDatabaseSQLiteTestSuite {
 
     @Test
-    func serviceLifecycleSupport() async throws {
+    func basicServiceLifecycleSupport() async throws {
         var logger = Logger(label: "test")
         logger.logLevel = .info
 
