@@ -191,15 +191,21 @@ actor SQLiteConnectionPool {
             logger: configuration.logger
         )
         do {
+            let foreignKeys = configuration.foreignKeysMode
+
             _ = try await connection.query(
-                "PRAGMA journal_mode = \(configuration.journalMode.rawValue);"
+                "PRAGMA foreign_keys = \(foreignKeys.rawValue);"
             )
-            _ = try await connection.query(
-                "PRAGMA busy_timeout = \(configuration.busyTimeoutMilliseconds);"
-            )
-            _ = try await connection.query(
-                "PRAGMA foreign_keys = \(configuration.foreignKeysMode.rawValue);"
-            )
+            if let busyTimeout = configuration.busyTimeoutMilliseconds {
+                _ = try await connection.query(
+                    "PRAGMA busy_timeout = \(busyTimeout);"
+                )
+            }
+            if let journalMode = configuration.journalMode {
+                _ = try await connection.query(
+                    "PRAGMA journal_mode = \(journalMode.rawValue);"
+                )
+            }
         }
         catch {
             await closeConnection(connection)

@@ -229,4 +229,84 @@ struct SQLiteNIOExtrasTestSuite {
             #expect(result[0].column("is_valid")?.bool == true)
         }
     }
+
+    // MARK: - lock
+
+    private actor LockBarrier {
+        private var ready = false
+        private var waiters: [CheckedContinuation<Void, Never>] = []
+
+        func waitUntilLocked() async {
+            if ready { return }
+            await withCheckedContinuation { continuation in
+                waiters.append(continuation)
+            }
+        }
+
+        func markLocked() {
+            guard !ready else { return }
+            ready = true
+            let pending = waiters
+            waiters.removeAll(keepingCapacity: false)
+            for continuation in pending {
+                continuation.resume()
+            }
+        }
+    }
+
+    @Test
+    func warmupWaitsForTransientExclusiveLock() async throws {
+        let dbPath =
+            "/tmp/feather-lock-\(UInt64.random(in: 0...UInt64.max)).sqlite"
+
+        var logger = Logger(label: "test.sqlite.lock.warmup")
+        logger.logLevel = .info
+
+        let config = SQLiteClient.Configuration(
+            storage: .file(path: dbPath),
+            logger: logger,
+            minimumConnections: 1,
+            maximumConnections: 1,
+            journalMode: .delete,
+            busyTimeoutMilliseconds: 5_000
+        )
+
+        let clientA = SQLiteClient(configuration: config)
+        let clientB = SQLiteClient(configuration: config)
+
+        try await clientA.run()
+        defer {
+            Task {
+                await clientB.shutdown()
+                await clientA.shutdown()
+            }
+        }
+
+        let barrier = LockBarrier()
+
+        let holder = Task {
+            try await clientA.withConnection { connection in
+                _ = try await connection.query("BEGIN EXCLUSIVE;")
+                await barrier.markLocked()
+                try await Task.sleep(for: .milliseconds(1200))
+                _ = try await connection.query("COMMIT;")
+            }
+        }
+
+        await barrier.waitUntilLocked()
+
+        let clock = ContinuousClock()
+        let start = clock.now
+
+        try await clientB.run()
+        try await clientB.withConnection { connection in
+            _ = try await connection.query("SELECT 1;")
+        }
+
+        let elapsed = start.duration(to: clock.now)
+        #expect(elapsed >= .milliseconds(900))
+
+        _ = try await holder.value
+    }
+
 }
